@@ -1,0 +1,46 @@
+[Source]
+kubernetes_url = "https://kubernetes.default"
+
+[EventsConfig]
+enabled = true
+
+[EventsConfig.KafkaEventConfig]
+enabled = true
+brokers = ["117.50.109.103:9092"]
+topic = "heapster-events"
+level = "Normal"
+namespaces = ["default"]
+kinds = ["Pod", "Deployment"]
+
+[EventsConfig.WebHookEventConfig]
+enabled = true
+webhook_url = "https://oapi.dingtalk.com/robot/send?access_token=f5a7c0fa3199ee9a1d3d060dc077920c0a00c5644d0611dffc0a72408d86ccba"
+level = "Normal"
+namespaces = ["default"]
+kinds = ["Pod", "Deployment"]
+
+[NodeInspectionConfig]
+enabled = true
+speed = 10
+
+[NodeInspectionConfig.KafkaNodeConfig]
+enabled = true
+brokers = ["117.50.109.103:9092"]
+topic = "heapster-nodes"
+
+[NodeInspectionConfig.WebHookNodeConfig]
+enabled = false
+
+[PodInspectionConfig]
+enabled = true
+speed = 30
+timeout_threshold = 300
+
+[PodInspectionConfig.KafkaPodConfig]
+enabled = true
+brokers = ["117.50.109.103:9092"]
+topic = "heapster-pods"
+namespaces = ["default", "kube-system"]
+
+[PodInspectionConfig.WebHookPodConfig]
+enabled = false
