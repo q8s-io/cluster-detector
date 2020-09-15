@@ -11,8 +11,6 @@ import (
 )
 
 func RunPodInspection() {
-	quitChannel := make(chan struct{}, 0)
-
 	argSource := configs.Config.Source
 	argKafkaSink := &configs.Config.PodInspectionConfig.KafkaPodConfig
 	argWebHookSink := &configs.Config.PodInspectionConfig.WebHookPodConfig
@@ -64,6 +62,4 @@ func RunPodInspection() {
 	}
 	manager.Start()
 	klog.Infof("Starting nodeInspection")
-
-	quitChannel <- struct{}{}
 }
