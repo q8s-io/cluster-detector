@@ -1,0 +1,92 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    name: cluster-detector
+  name: cluster-detector
+  namespace: kube-system
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: cluster-detector
+  template:
+    metadata:
+      labels:
+        app: cluster-detector
+      annotations:	
+        scheduler.alpha.kubernetes.io/critical-pod: ''
+    spec:
+      dnsPolicy: ClusterFirstWithHostNet
+      serviceAccount: cluster-detector
+      containers:
+        - image: uhub.service.ucloud.cn/devsecops/cluster-detector:9e43e26
+          name: cluster-detector
+          args: 
+          #- --v=10      
+          env:
+          # If TZ is assigned, set the TZ value as the time zone
+          - name: TZ
+            value: "Asia/Shanghai" 
+          volumeMounts:
+            - name: localtime
+              mountPath: /etc/localtime
+              readOnly: true
+            - name: zoneinfo
+              mountPath: /usr/share/zoneinfo
+              readOnly: true
+            - name: config
+              mountPath: /configs
+          imagePullPolicy: Always
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+            limits:
+              cpu: 500m
+              memory: 250Mi
+      volumes:
+        - name: localtime
+          hostPath:
+            path: /etc/localtime
+        - name: zoneinfo
+          hostPath:
+            path: /usr/share/zoneinfo
+        - name: config
+          configMap:
+            name: cluster-detector
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-detector
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - nodes
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-detector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-detector
+subjects:
+  - kind: ServiceAccount
+    name: cluster-detector
+    namespace: kube-system
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-detector
+  namespace: kube-system
