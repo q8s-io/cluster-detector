@@ -15,6 +15,7 @@
 package kafka
 
 import (
+	"fmt"
 	"github.com/q8s-io/cluster-detector/configs"
 	kafka_common "github.com/q8s-io/cluster-detector/pkg/common/kafka"
 	"github.com/q8s-io/cluster-detector/pkg/core"
@@ -77,6 +78,10 @@ func (sink *eventKafkaSink) skipEvent(event *kube_api.Event) bool {
 
 	// filter kinds
 	if sink.kinds != nil {
+		fmt.Println("----sink-kind and this kind-----------")
+		fmt.Printf("%v\n",sink.kinds)
+		fmt.Println(event.InvolvedObject.Kind)
+		fmt.Println("------------------------")
 		skip := true
 		for _, kind := range sink.kinds {
 			if kind == event.InvolvedObject.Kind {
@@ -95,7 +100,7 @@ func (sink *eventKafkaSink) ExportEvents(eventBatch *core.EventBatch) {
 	sink.kafkaSink.Lock()
 	defer sink.kafkaSink.Unlock()
 
-	for _, event := range eventBatch.Events {
+	/*for _, event := range eventBatch.Events {
 		if !sink.skipEvent(event) {
 			sinkPoint := &core.EventSinkPoint{}
 			sinkPoint, err := sinkPoint.EventToPoint(event)
@@ -108,6 +113,11 @@ func (sink *eventKafkaSink) ExportEvents(eventBatch *core.EventBatch) {
 				klog.Errorf("Failed to produce event message: %s", err)
 			}
 		}
+	}*/
+	err := sink.kafkaSink.KafkaClient.ProduceKafkaMessage(*eventBatch)
+	//fmt.Printf("%+v\n",eventBatch.Events)
+	if err != nil {
+		klog.Errorf("Failed to produce NodeInspection message: %s", err)
 	}
 }
 
@@ -217,4 +227,29 @@ func NewPodKafkaSink(kafkaPodConfig *configs.KafkaPodConfig) (core.PodSink, erro
 		namespaces: kafkaPodConfig.Namespaces,
 	}
 	return podKafkaSink, nil
+}
+
+type deleteKafkaSink kafkaSink
+
+func NewDeleteKafkaSink(kafkaConfig *configs.Kafka)(core.DeleteSink,error){
+	client, err := kafka_common.NewKafkaClient(kafkaConfig, kafka_common.DeleteTopic)
+	if err != nil {
+		return nil, err
+	}
+	// init kafkaSink
+	kafkaSink := &deleteKafkaSink{
+		KafkaClient: client,
+	}
+	return kafkaSink,nil
+}
+
+func (sink *deleteKafkaSink) ExportDeleteInspection(deleteBatch *core.DeleteInspectionBatch) {
+
+	sink.Lock()
+	defer sink.Unlock()
+	//klog.V(0).Info(nodeBatch)
+	err := sink.KafkaClient.ProduceKafkaMessage(deleteBatch)
+	if err != nil {
+		klog.Errorf("Failed to produce NodeInspection message: %s", err)
+	}
 }

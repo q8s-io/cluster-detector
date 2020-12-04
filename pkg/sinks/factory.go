@@ -18,7 +18,6 @@ import (
 	"github.com/q8s-io/cluster-detector/configs"
 	"github.com/q8s-io/cluster-detector/pkg/core"
 	"github.com/q8s-io/cluster-detector/pkg/sinks/kafka"
-	"github.com/q8s-io/cluster-detector/pkg/sinks/webhook"
 )
 
 type SinkFactory struct {
@@ -36,18 +35,21 @@ func (_ *SinkFactory) BuildPodKafka(kafkaPodConfig *configs.KafkaPodConfig) (cor
 	return kafka.NewPodKafkaSink(kafkaPodConfig)
 }
 
-func (_ *SinkFactory) BuildEventWebHook(webHookEventConfig *configs.WebHookEventConfig) (core.EventSink, error) {
+/*func (_ *SinkFactory) BuildEventWebHook(webHookEventConfig *configs.WebHookEventConfig) (core.EventSink, error) {
 	return webhook.NewEventWebHookSink(webHookEventConfig)
-}
+}*/
 
-func (_ *SinkFactory) BuildNodeWebHook(webHookConfig *configs.WebHook) (core.NodeSink, error) {
+/*func (_ *SinkFactory) BuildNodeWebHook(webHookConfig *configs.WebHook) (core.NodeSink, error) {
 	return webhook.NewNodeWebHookSink(webHookConfig)
-}
+}*/
 
-func (_ *SinkFactory) BuildPodWebHook(webHookConfig *configs.WebHookPodConfig) (core.PodSink, error) {
+/*func (_ *SinkFactory) BuildPodWebHook(webHookConfig *configs.WebHookPodConfig) (core.PodSink, error) {
 	return webhook.NewPodWebHookSink(webHookConfig)
-}
+}*/
 
+func (_ *SinkFactory)BuildDeleteKafka(kafkaDeleteConfig *configs.Kafka)(core.DeleteSink,error){
+	return kafka.NewDeleteKafkaSink(kafkaDeleteConfig)
+}
 func NewSinkFactory() *SinkFactory {
 	return &SinkFactory{}
 }

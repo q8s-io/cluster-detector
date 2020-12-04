@@ -14,7 +14,7 @@ func RunEventsWatch() {
 
 	argSource := configs.Config.Source
 	argKafkaSink := &configs.Config.EventsConfig.KafkaEventConfig
-	argWebHookSink := &configs.Config.EventsConfig.WebHookEventConfig
+	//argWebHookSink := &configs.Config.EventsConfig.WebHookEventConfig
 
 	// sources
 	if argSource.KubernetesURL == "" {
@@ -42,13 +42,13 @@ func RunEventsWatch() {
 	}
 
 	// WebHook sink
-	if argWebHookSink.Enabled == true {
+	/*if argWebHookSink.Enabled == true {
 		webHookSink, webHookErr := sinksFactory.BuildEventWebHook(argWebHookSink)
 		if webHookErr != nil {
 			klog.Fatalf("Failed to create webHookSink: %v", webHookErr)
 		}
 		sinkList = append(sinkList, webHookSink)
-	}
+	}*/
 
 	if len(sinkList) == 0 {
 		klog.Fatal("No available sink to use")

@@ -1,6 +1,6 @@
 package webhook
 
-import (
+/*import (
 	"bytes"
 	"encoding/json"
 	"fmt"
@@ -201,3 +201,4 @@ func NewPodWebHookSink(webHookPodConfig *configs.WebHookPodConfig) (*PodWebHookS
 	}
 	return sink, nil
 }
+*/

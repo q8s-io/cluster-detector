@@ -1,13 +1,12 @@
 package filters
 
 import (
-	"k8s.io/api/core/v1"
 	"strings"
 )
 
 // All filter interface
 type Filter interface {
-	Filter(event *v1.Event) (matched bool)
+	Filter(event interface{}) (matched bool)
 }
 
 func GetValues(o []string) []string {

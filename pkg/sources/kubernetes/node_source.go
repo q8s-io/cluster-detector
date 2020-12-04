@@ -91,3 +91,4 @@ func NewNodeInspectionSource(uri *url.URL) (*NodeInspectionSource, error) {
 	}
 	return &result, nil
 }
+

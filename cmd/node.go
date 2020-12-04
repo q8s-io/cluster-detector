@@ -13,7 +13,7 @@ import (
 func RunNodeInspection() {
 	argSource := configs.Config.Source
 	argKafkaSink := &configs.Config.NodeInspectionConfig.KafkaNodeConfig
-	argWebHookSink := &configs.Config.NodeInspectionConfig.WebHookNodeConfig
+	//argWebHookSink := &configs.Config.NodeInspectionConfig.WebHookNodeConfig
 
 	// sources
 	if argSource.KubernetesURL == "" {
@@ -41,13 +41,13 @@ func RunNodeInspection() {
 	}
 
 	// WebHook sink
-	if argWebHookSink.Enabled == true {
+	/*if argWebHookSink.Enabled == true {
 		webHookSink, webHookErr := sinksFactory.BuildNodeWebHook(argWebHookSink)
 		if webHookErr != nil {
 			klog.Fatalf("Failed to create webHookSink: %v", webHookErr)
 		}
 		sinkList = append(sinkList, webHookSink)
-	}
+	}*/
 
 	if len(sinkList) == 0 {
 		klog.Fatal("No available sink to use")

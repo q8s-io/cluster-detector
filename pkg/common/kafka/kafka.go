@@ -21,6 +21,7 @@ const (
 	eventsTopic            = "heapster-events"
 	nodesTopic             = "heapster-nodes"
 	podsTopic              = "heapster-pods"
+	deletesTopic		   = "heapster-deletes"
 )
 
 const (
@@ -28,6 +29,8 @@ const (
 	EventsTopic     = "eventstopic"
 	NodesTopic      = "nodestopic"
 	PodsTopic       = "podstopic"
+	DeleteTopic     = "deletetopic"
+
 )
 
 type KafkaClient interface {
@@ -82,6 +85,8 @@ func getTopic(topic string, topicType string) (string, error) {
 		topic = nodesTopic
 	case PodsTopic:
 		topic = podsTopic
+	case DeleteTopic:
+		topic = deletesTopic
 	default:
 		return "", fmt.Errorf("Topic type %s is illegal.", topicType)
 	}

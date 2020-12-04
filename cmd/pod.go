@@ -13,7 +13,7 @@ import (
 func RunPodInspection() {
 	argSource := configs.Config.Source
 	argKafkaSink := &configs.Config.PodInspectionConfig.KafkaPodConfig
-	argWebHookSink := &configs.Config.PodInspectionConfig.WebHookPodConfig
+	//argWebHookSink := &configs.Config.PodInspectionConfig.WebHookPodConfig
 
 	// sources
 	if argSource.KubernetesURL == "" {
@@ -41,13 +41,13 @@ func RunPodInspection() {
 	}
 
 	// WebHook sink
-	if argWebHookSink.Enabled == true{
+	/*if argWebHookSink.Enabled == true{
 		webHookSink, webHookErr := sinksFactory.BuildPodWebHook(argWebHookSink)
 		if webHookErr != nil {
 			klog.Fatalf("Failed to create kafkaSink: %v", webHookErr)
 		}
 		sinkList = append(sinkList, webHookSink)
-	}
+	}*/
 
 	// sink manager
 	sinkManagers, smErr := sm_pod.NewPodSinkManager(sinkList, sm_pod.DefaultSinkExportPodsTimeout, sm_pod.DefaultSinkStopTimeout)

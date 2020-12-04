@@ -13,7 +13,7 @@ WORKDIR $GOPATH/src/$CODEPATH
 
 COPY . .
 
-RUN GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOPROXY=https://mirrors.aliyun.com/goproxy/ go build -o /kube-watcher detector.go
+RUN GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOPROXY=https://goproxy.cn go build -o /kube-watcher detector.go
 
 # build server
 FROM alpine:3.8

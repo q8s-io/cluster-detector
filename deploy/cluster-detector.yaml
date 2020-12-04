@@ -37,6 +37,8 @@ spec:
               readOnly: true
             - name: config
               mountPath: /configs
+            - name: kube-config
+              mountPath: /root/.kube
           imagePullPolicy: Always
           resources:
             requests:
@@ -46,6 +48,9 @@ spec:
               cpu: 500m
               memory: 250Mi
       volumes:
+        - name: kube-config
+          hostPath:
+            path: /root/.kube
         - name: localtime
           hostPath:
             path: /etc/localtime

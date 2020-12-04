@@ -37,7 +37,6 @@ func Run() {
 		klog.Fatal(err)
 	}
 	flag.Parse()
-
 	// Start watch resource of cluster
 	if configs.Config.EventsConfig.Enabled == true {
 		go RunEventsWatch()
@@ -48,6 +47,11 @@ func Run() {
 	if configs.Config.PodInspectionConfig.Enabled == true {
 		go RunPodInspection()
 	}
+	if configs.Config.DeleteInspectionConfig.Enabled==true{
+		fmt.Println("配置文件解析成功！")
+		go RunDeleteInspection()
+	}
+
 	go startHTTPServer()
 	<-quitChannel
 }

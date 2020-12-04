@@ -23,6 +23,7 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/schema"
 	"k8s.io/client-go/kubernetes"
 	kubeclient "k8s.io/client-go/kubernetes"
+	dynamicClient "k8s.io/client-go/dynamic"
 	kube_rest "k8s.io/client-go/rest"
 	kubeClientCmd "k8s.io/client-go/tools/clientcmd"
 	kubeClientCmdApi "k8s.io/client-go/tools/clientcmd/api"
@@ -39,6 +40,7 @@ const (
 )
 
 var KubernetesClientSingleton kubernetes.Interface = nil
+var KubernetesDynamicClientSingleton dynamicClient.Interface=nil
 
 func getConfigOverrides(uri *url.URL) (*kubeClientCmd.ConfigOverrides, error) {
 	kubeConfigOverride := kubeClientCmd.ConfigOverrides{
@@ -164,5 +166,22 @@ func GetKubernetesClient(uri *url.URL) (client kubernetes.Interface, err error) 
 		return nil, err
 	}
 	KubernetesClientSingleton = kubeClient
+	return kubeClient, nil
+}
+
+func GetKubernetesDynamicClient(uri *url.URL) (client dynamicClient.Interface, err error) {
+	if uri == nil {
+		return KubernetesDynamicClientSingleton, nil
+	}
+	kubeConfig, err := GetKubeClientConfig(uri)
+	if err != nil {
+		return nil, err
+	}
+	kubeClient, err := dynamicClient.NewForConfig(kubeConfig)
+
+	if err != nil {
+		return nil, err
+	}
+	KubernetesDynamicClientSingleton=kubeClient
 	return kubeClient, nil
 }

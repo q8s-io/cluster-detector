@@ -2,29 +2,38 @@
 kubernetes_url = "https://kubernetes.default"
 
 [EventsConfig]
-enabled = true
+enabled = false
 
 [EventsConfig.KafkaEventConfig]
-enabled = true
+enabled = false
 brokers = ["117.50.109.103:9092"]
 topic = "heapster-events"
 level = "Normal"
 namespaces = ["default"]
-kinds = ["Pod", "Deployment"]
+kinds = ["Pod", "Deployment","Ser"]
 
 [EventsConfig.WebHookEventConfig]
-enabled = true
+enabled = false
 webhook_url = "https://oapi.dingtalk.com/robot/send?access_token=f5a7c0fa3199ee9a1d3d060dc077920c0a00c5644d0611dffc0a72408d86ccba"
 level = "Normal"
 namespaces = ["default"]
 kinds = ["Pod", "Deployment"]
+
+[DeleteInspectionConfig]
+enabled = true
+speed = 10
+
+[DeleteInspectionConfig.KafkaDeleteConfig]
+enabled = true
+brokers = ["10.99.113.29:9092"]
+topic = "heapster-deletes"
 
 [NodeInspectionConfig]
 enabled = true
 speed = 10
 
 [NodeInspectionConfig.KafkaNodeConfig]
-enabled = true
+enabled = false
 brokers = ["117.50.109.103:9092"]
 topic = "heapster-nodes"
 
@@ -32,12 +41,12 @@ topic = "heapster-nodes"
 enabled = false
 
 [PodInspectionConfig]
-enabled = true
+enabled = false
 speed = 30
 timeout_threshold = 300
 
 [PodInspectionConfig.KafkaPodConfig]
-enabled = true
+enabled = false
 brokers = ["117.50.109.103:9092"]
 topic = "heapster-pods"
 namespaces = ["default", "kube-system"]

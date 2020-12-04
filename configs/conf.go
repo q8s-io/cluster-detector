@@ -8,6 +8,8 @@ type Runtime struct {
 	EventsConfig         EventsConfig
 	NodeInspectionConfig NodeInspectionConfig
 	PodInspectionConfig  PodInspectionConfig
+	DeleteInspectionConfig DeleteInspectionConfig
+//	ServiceInspectionConfig
 }
 
 // kubernetes url
@@ -43,6 +45,12 @@ type NodeInspectionConfig struct {
 	WebHookNodeConfig WebHook
 }
 
+type DeleteInspectionConfig struct {
+	Enabled bool `toml:"enabled"`
+	Speed int `toml:"speed"`
+	KafkaDeleteConfig Kafka
+}
+
 // PodInspection config
 type PodInspectionConfig struct {
 	Enabled          bool `toml:"enabled"`
@@ -52,6 +60,13 @@ type PodInspectionConfig struct {
 	WebHookPodConfig WebHookPodConfig
 }
 
+type ServiceInspectionConfig struct {
+	Enabled bool `toml:"enabled"`
+	Speed int `toml:"speed"`
+	TimeoutThreshold int `toml:"timeout_threshold"`
+}
+
+
 type PodInspectionFilter struct {
 	Namespaces []string `toml:"namespaces"`
 }
@@ -60,6 +75,7 @@ type KafkaPodConfig struct {
 	Kafka
 	PodInspectionFilter
 }
+
 
 type WebHookPodConfig struct {
 	WebHook

@@ -27,20 +27,7 @@ func (_ *SourceFactory) BuildEvents(source configs.Source) ([]core.EventSource, 
 	return result, err
 }
 
-func (_ *SourceFactory) BuildNodeInspection(source configs.Source) ([]core.NodeInspectionSource, error) {
-	var result []core.NodeInspectionSource
-	URL, parseErr := url.ParseRequestURI(source.KubernetesURL)
-	if parseErr != nil {
-		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
-	}
-	src, err := kube.NewNodeInspectionSource(URL)
-	if err != nil {
-		klog.Errorf("Failed to create %s: %v", source, err)
-	} else {
-		result = append(result, src)
-	}
-	return result, err
-}
+
 
 func (_ *SourceFactory) BuildPodInspection(source configs.Source) ([]core.PodInspectionSource, error) {
 	var result []core.PodInspectionSource
@@ -59,4 +46,34 @@ func (_ *SourceFactory) BuildPodInspection(source configs.Source) ([]core.PodIns
 
 func NewSourceFactory() *SourceFactory {
 	return &SourceFactory{}
+}
+
+func (_ *SourceFactory) BuildDeleteSource(source configs.Source) ([]core.DeleteInspectionSource,error) {
+	var result []core.DeleteInspectionSource
+	URL, parseErr := url.ParseRequestURI(source.KubernetesURL)
+	if parseErr != nil {
+		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
+	}
+	src,err:=kube.NewDeleteInspectionSource(URL)
+	if err != nil {
+		klog.Errorf("Failed to create %s: %v", source, err)
+	} else {
+		result = append(result, src)
+	}
+	return result, err
+}
+
+func (_ *SourceFactory) BuildNodeInspection(source configs.Source) ([]core.NodeInspectionSource, error) {
+	var result []core.NodeInspectionSource
+	URL, parseErr := url.ParseRequestURI(source.KubernetesURL)
+	if parseErr != nil {
+		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
+	}
+	src, err := kube.NewNodeInspectionSource(URL)
+	if err != nil {
+		klog.Errorf("Failed to create %s: %v", source, err)
+	} else {
+		result = append(result, src)
+	}
+	return result, err
 }
