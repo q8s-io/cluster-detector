@@ -1,6 +1,7 @@
 package kubernetes
 
 import (
+	"fmt"
 	deletecore "github.com/q8s-io/cluster-detector/pkg/core"
 	resource "github.com/q8s-io/cluster-detector/pkg/sources/kubernetes/deleteresource"
 	"github.com/q8s-io/cluster-detector/pkg/sources/kubernetes/determiner"
@@ -183,6 +184,8 @@ func (delete *DeleteInspectionSource)inspection(){
 	dels:=newRunner()
 	delete.num=len(dels)
 	for _,v:=range dels{
+		fmt.Printf("%+v\n",*v)
+
 		delete.localNodeBuffer<-v
 	}
 }
