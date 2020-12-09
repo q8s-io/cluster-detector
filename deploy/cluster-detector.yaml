@@ -1,3 +1,42 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: cluster-detector
+rules:
+  - apiGroups:
+      - ""
+    resources:
+      - events
+      - nodes
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-detector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-detector
+subjects:
+  - kind: ServiceAccount
+    name: cluster-detector
+    namespace: kube-system
+
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-detector
+  namespace: kube-system
+
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -14,7 +53,7 @@ spec:
     metadata:
       labels:
         app: cluster-detector
-      annotations:	
+      annotations:
         scheduler.alpha.kubernetes.io/critical-pod: ''
     spec:
       dnsPolicy: ClusterFirstWithHostNet
@@ -22,12 +61,12 @@ spec:
       containers:
         - image: uhub.service.ucloud.cn/devsecops/cluster-detector:9e43e26
           name: cluster-detector
-          args: 
-          #- --v=10      
+          args:
+          - --v=10
           env:
           # If TZ is assigned, set the TZ value as the time zone
           - name: TZ
-            value: "Asia/Shanghai" 
+            value: "Asia/Shanghai"
           volumeMounts:
             - name: localtime
               mountPath: /etc/localtime
@@ -60,38 +99,3 @@ spec:
         - name: config
           configMap:
             name: cluster-detector
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRole
-metadata:
-  name: cluster-detector
-rules:
-  - apiGroups:
-      - ""
-    resources:
-      - events
-      - nodes
-      - pods
-    verbs:
-      - get
-      - list
-      - watch
----
-apiVersion: rbac.authorization.k8s.io/v1
-kind: ClusterRoleBinding
-metadata:
-  name: cluster-detector
-roleRef:
-  apiGroup: rbac.authorization.k8s.io
-  kind: ClusterRole
-  name: cluster-detector
-subjects:
-  - kind: ServiceAccount
-    name: cluster-detector
-    namespace: kube-system
----
-apiVersion: v1
-kind: ServiceAccount
-metadata:
-  name: cluster-detector
-  namespace: kube-system

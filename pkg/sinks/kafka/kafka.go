@@ -1,28 +1,16 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package kafka
 
 import (
 	"fmt"
-	"github.com/q8s-io/cluster-detector/configs"
-	kafka_common "github.com/q8s-io/cluster-detector/pkg/common/kafka"
-	"github.com/q8s-io/cluster-detector/pkg/core"
-	"github.com/q8s-io/cluster-detector/pkg/sinks/tool"
-	kube_api "k8s.io/api/core/v1"
-	"k8s.io/klog"
 	"sync"
+
+	"k8s.io/api/core/v1"
+	"k8s.io/klog"
+
+	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kafka"
+	"github.com/q8s-io/cluster-detector/pkg/sinks/tool"
 )
 
 const (
@@ -34,7 +22,7 @@ const (
 )
 
 type kafkaSink struct {
-	kafka_common.KafkaClient
+	kafka.KafkaClient
 	sync.RWMutex
 }
 
@@ -54,7 +42,7 @@ func (sink *eventKafkaSink) Stop() {
 }
 
 // filter event by given conditions
-func (sink *eventKafkaSink) skipEvent(event *kube_api.Event) bool {
+func (sink *eventKafkaSink) skipEvent(event *v1.Event) bool {
 	// filter level
 	// If warning level is given, don’t care about normal level.
 	// However, giving normal level also accept warning level.
@@ -79,7 +67,7 @@ func (sink *eventKafkaSink) skipEvent(event *kube_api.Event) bool {
 	// filter kinds
 	if sink.kinds != nil {
 		fmt.Println("----sink-kind and this kind-----------")
-		fmt.Printf("%v\n",sink.kinds)
+		fmt.Printf("%v\n", sink.kinds)
 		fmt.Println(event.InvolvedObject.Kind)
 		fmt.Println("------------------------")
 		skip := true
@@ -96,7 +84,7 @@ func (sink *eventKafkaSink) skipEvent(event *kube_api.Event) bool {
 	return false
 }
 
-func (sink *eventKafkaSink) ExportEvents(eventBatch *core.EventBatch) {
+func (sink *eventKafkaSink) ExportEvents(eventBatch *entity.EventBatch) {
 	sink.kafkaSink.Lock()
 	defer sink.kafkaSink.Unlock()
 
@@ -121,9 +109,9 @@ func (sink *eventKafkaSink) ExportEvents(eventBatch *core.EventBatch) {
 	}
 }
 
-func NewEventKafkaSink(kafkaEventConfig *configs.KafkaEventConfig) (core.EventSink, error) {
+func NewEventKafkaSink(kafkaEventConfig *config.KafkaEventConfig) (entity.EventSink, error) {
 	// get kafka Client
-	client, err := kafka_common.NewKafkaClient(&kafkaEventConfig.Kafka, kafka_common.EventsTopic)
+	client, err := kafka.NewKafkaClient(&kafkaEventConfig.Kafka, kafka.EventsTopic)
 	if err != nil {
 		return nil, err
 	}
@@ -150,7 +138,7 @@ func (sink *nodeKafkaSink) Name() string {
 	return NODE_KAFKA_SINK
 }
 
-func (sink *nodeKafkaSink) ExportNodeInspection(nodeBatch *core.NodeInspectionBatch) {
+func (sink *nodeKafkaSink) ExportNodeInspection(nodeBatch *entity.NodeInspectionBatch) {
 	sink.Lock()
 	defer sink.Unlock()
 	//klog.V(0).Info(nodeBatch)
@@ -164,9 +152,9 @@ func (sink *nodeKafkaSink) Stop() {
 	return
 }
 
-func NewNodeKafkaSink(kafkaConfig *configs.Kafka) (core.NodeSink, error) {
+func NewNodeKafkaSink(kafkaConfig *config.Kafka) (entity.NodeSink, error) {
 	// get kafka Client
-	client, err := kafka_common.NewKafkaClient(kafkaConfig, kafka_common.NodesTopic)
+	client, err := kafka.NewKafkaClient(kafkaConfig, kafka.NodesTopic)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +166,7 @@ func NewNodeKafkaSink(kafkaConfig *configs.Kafka) (core.NodeSink, error) {
 }
 
 type podKafkaSink struct {
-	namespaces core.Namespaces
+	namespaces entity.Namespaces
 	kafkaSink  *kafkaSink
 }
 
@@ -190,12 +178,12 @@ func (sink *podKafkaSink) Stop() {
 	return
 }
 
-func (sink *podKafkaSink) ExportPodInspection(podBatch *core.PodInspectionBatch) {
+func (sink *podKafkaSink) ExportPodInspection(podBatch *entity.PodInspectionBatch) {
 	sink.kafkaSink.Lock()
 	defer sink.kafkaSink.Unlock()
-	batch := &core.PodInspectionBatch{
+	batch := &entity.PodInspectionBatch{
 		TimeStamp:   podBatch.TimeStamp,
-		Inspections: make([]*core.PodInspection, 0),
+		Inspections: make([]*entity.PodInspection, 0),
 	}
 	for _, inspection := range podBatch.Inspections {
 		skip := sink.namespaces.SkipPod(inspection)
@@ -210,9 +198,9 @@ func (sink *podKafkaSink) ExportPodInspection(podBatch *core.PodInspectionBatch)
 	}
 }
 
-func NewPodKafkaSink(kafkaPodConfig *configs.KafkaPodConfig) (core.PodSink, error) {
+func NewPodKafkaSink(kafkaPodConfig *config.KafkaPodConfig) (entity.PodSink, error) {
 	// get kafka Client
-	client, err := kafka_common.NewKafkaClient(&kafkaPodConfig.Kafka, kafka_common.PodsTopic)
+	client, err := kafka.NewKafkaClient(&kafkaPodConfig.Kafka, kafka.PodsTopic)
 	if err != nil {
 		return nil, err
 	}
@@ -231,8 +219,8 @@ func NewPodKafkaSink(kafkaPodConfig *configs.KafkaPodConfig) (core.PodSink, erro
 
 type deleteKafkaSink kafkaSink
 
-func NewDeleteKafkaSink(kafkaConfig *configs.Kafka)(core.DeleteSink,error){
-	client, err := kafka_common.NewKafkaClient(kafkaConfig, kafka_common.DeleteTopic)
+func NewDeleteKafkaSink(kafkaConfig *config.Kafka) (entity.DeleteSink, error) {
+	client, err := kafka.NewKafkaClient(kafkaConfig, kafka.DeleteTopic)
 	if err != nil {
 		return nil, err
 	}
@@ -240,10 +228,10 @@ func NewDeleteKafkaSink(kafkaConfig *configs.Kafka)(core.DeleteSink,error){
 	kafkaSink := &deleteKafkaSink{
 		KafkaClient: client,
 	}
-	return kafkaSink,nil
+	return kafkaSink, nil
 }
 
-func (sink *deleteKafkaSink) ExportDeleteInspection(deleteBatch *core.DeleteInspectionBatch) {
+func (sink *deleteKafkaSink) ExportDeleteInspection(deleteBatch *entity.DeleteInspectionBatch) {
 
 	sink.Lock()
 	defer sink.Unlock()

@@ -4,9 +4,9 @@ import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/q8s-io/cluster-detector/pkg/core"
 	"k8s.io/klog"
+
+	"github.com/q8s-io/cluster-detector/pkg/entity"
 )
 
 const (
@@ -15,27 +15,10 @@ const (
 	SINK_MANAGER_NAME             = "NodeInspection-Manager"
 )
 
-var (
-	// Time spent exporting events to sink in milliseconds.
-	exporterDuration = prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Namespace: "deleteInspection",
-			Subsystem: "exporter",
-			Name:      "duration_milliseconds",
-			Help:      "Time spent exporting events to sink in milliseconds.",
-		},
-		[]string{"exporter"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(exporterDuration)
-}
-
 type sinkHolder struct {
-	sink             core.DeleteSink
-	deleteBatchChannel chan *core.DeleteInspectionBatch
-	stopChannel      chan bool
+	sink               entity.DeleteSink
+	deleteBatchChannel chan *entity.DeleteInspectionBatch
+	stopChannel        chan bool
 }
 
 // Sink Manager - a special sink that distributes data to other sinks. It pushes data
@@ -48,13 +31,13 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-func NewDeleteSinkManager(sinks []core.DeleteSink, exportEventsTimeout, stopTimeout time.Duration) (core.DeleteSink, error) {
+func NewDeleteSinkManager(sinks []entity.DeleteSink, exportEventsTimeout, stopTimeout time.Duration) (entity.DeleteSink, error) {
 	var sinkHolders []sinkHolder
 	for _, sink := range sinks {
 		sh := sinkHolder{
-			sink:             sink,
-			deleteBatchChannel: make(chan *core.DeleteInspectionBatch),
-			stopChannel:      make(chan bool),
+			sink:               sink,
+			deleteBatchChannel: make(chan *entity.DeleteInspectionBatch),
+			stopChannel:        make(chan bool),
 		}
 		sinkHolders = append(sinkHolders, sh)
 		go func(sh sinkHolder) {
@@ -80,7 +63,7 @@ func NewDeleteSinkManager(sinks []core.DeleteSink, exportEventsTimeout, stopTime
 }
 
 // Guarantees that the export will complete in exportEventsTimeout.
-func (this *sinkManager) ExportDeleteInspection(data *core.DeleteInspectionBatch) {
+func (this *sinkManager) ExportDeleteInspection(data *entity.DeleteInspectionBatch) {
 	var wg sync.WaitGroup
 	for _, sh := range this.sinkHolders {
 		wg.Add(1)
@@ -121,13 +104,6 @@ func (this *sinkManager) Stop() {
 	}
 }
 
-func export(s core.DeleteSink, data *core.DeleteInspectionBatch) {
-	startTime := time.Now()
-	defer func() {
-		exporterDuration.
-			WithLabelValues(s.Name()).
-			Observe(float64(time.Since(startTime)) / float64(time.Millisecond))
-	}()
+func export(s entity.DeleteSink, data *entity.DeleteInspectionBatch) {
 	s.ExportDeleteInspection(data)
 }
-

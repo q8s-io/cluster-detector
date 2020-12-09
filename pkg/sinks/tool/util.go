@@ -1,8 +1,9 @@
 package tool
 
 import (
-	v1 "k8s.io/api/core/v1"
 	"strings"
+
+	v1 "k8s.io/api/core/v1"
 )
 
 func GetLevel(level string) int {

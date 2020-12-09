@@ -1,25 +1,26 @@
 package cmd
 
 import (
-	"github.com/q8s-io/cluster-detector/configs"
-	nodecore "github.com/q8s-io/cluster-detector/pkg/core"
-	m_node "github.com/q8s-io/cluster-detector/pkg/manager/node"
-	"github.com/q8s-io/cluster-detector/pkg/sinks"
-	sm_node "github.com/q8s-io/cluster-detector/pkg/sinks/manager/node"
-	"github.com/q8s-io/cluster-detector/pkg/sources"
 	"k8s.io/klog"
+
+	nodecore "github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/manager/node"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube"
+	"github.com/q8s-io/cluster-detector/pkg/sinks"
+	sinkNode "github.com/q8s-io/cluster-detector/pkg/sinks/manager/node"
 )
 
 func RunNodeInspection() {
-	argSource := configs.Config.Source
-	argKafkaSink := &configs.Config.NodeInspectionConfig.KafkaNodeConfig
+	argSource := config.Config.Source
+	argKafkaSink := &config.Config.NodeInspectionConfig.KafkaNodeConfig
 	//argWebHookSink := &configs.Config.NodeInspectionConfig.WebHookNodeConfig
 
 	// sources
 	if argSource.KubernetesURL == "" {
 		klog.Fatal("Wrong sources specified")
 	}
-	sourceFactory := sources.NewSourceFactory()
+	sourceFactory := kube.NewSourceFactory()
 	nodeResources, buildErr := sourceFactory.BuildNodeInspection(argSource)
 	if buildErr != nil {
 		klog.Fatalf("Failed to create sources: %v", buildErr)
@@ -57,13 +58,13 @@ func RunNodeInspection() {
 	}
 
 	// SinkManager put events to sinkList
-	sinkManagers, smErr := sm_node.NewNodeSinkManager(sinkList, sm_node.DefaultSinkExportNodesTimeout, sm_node.DefaultSinkStopTimeout)
+	sinkManagers, smErr := sinkNode.NewNodeSinkManager(sinkList, sinkNode.DefaultSinkExportNodesTimeout, sinkNode.DefaultSinkStopTimeout)
 	if smErr != nil {
 		klog.Fatalf("Failed to create sink manager: %v", smErr)
 	}
 
 	// Main Manager
-	manager, managerErr := m_node.NewManager(nodeResources[0], sinkManagers, *argFrequency)
+	manager, managerErr := node.NewManager(nodeResources[0], sinkManagers, *argFrequency)
 	if managerErr != nil {
 		klog.Fatalf("Failed to create main manager: %v", managerErr)
 	}

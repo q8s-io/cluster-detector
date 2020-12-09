@@ -1,25 +1,26 @@
 package cmd
 
 import (
-	"github.com/q8s-io/cluster-detector/configs"
-	podcore "github.com/q8s-io/cluster-detector/pkg/core"
-	m_pod "github.com/q8s-io/cluster-detector/pkg/manager/pod"
-	"github.com/q8s-io/cluster-detector/pkg/sinks"
-	sm_pod "github.com/q8s-io/cluster-detector/pkg/sinks/manager/pod"
-	"github.com/q8s-io/cluster-detector/pkg/sources"
 	"k8s.io/klog"
+
+	podcore "github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/manager/pod"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube"
+	"github.com/q8s-io/cluster-detector/pkg/sinks"
+	sinkPod "github.com/q8s-io/cluster-detector/pkg/sinks/manager/pod"
 )
 
 func RunPodInspection() {
-	argSource := configs.Config.Source
-	argKafkaSink := &configs.Config.PodInspectionConfig.KafkaPodConfig
+	argSource := config.Config.Source
+	argKafkaSink := &config.Config.PodInspectionConfig.KafkaPodConfig
 	//argWebHookSink := &configs.Config.PodInspectionConfig.WebHookPodConfig
 
 	// sources
 	if argSource.KubernetesURL == "" {
 		klog.Fatal("Wrong sources specified")
 	}
-	sourceFactory := sources.NewSourceFactory()
+	sourceFactory := kube.NewSourceFactory()
 	podResources, buildErr := sourceFactory.BuildPodInspection(argSource)
 	if buildErr != nil {
 		klog.Fatalf("Failed to create sources: %v", buildErr)
@@ -50,13 +51,13 @@ func RunPodInspection() {
 	}*/
 
 	// sink manager
-	sinkManagers, smErr := sm_pod.NewPodSinkManager(sinkList, sm_pod.DefaultSinkExportPodsTimeout, sm_pod.DefaultSinkStopTimeout)
+	sinkManagers, smErr := sinkPod.NewPodSinkManager(sinkList, sinkPod.DefaultSinkExportPodsTimeout, sinkPod.DefaultSinkStopTimeout)
 	if smErr != nil {
 		klog.Fatalf("Failed to create sink manager: %v", smErr)
 	}
 
 	// Main Manager
-	manager, managerErr := m_pod.NewManager(podResources[0], sinkManagers, *argFrequency)
+	manager, managerErr := pod.NewManager(podResources[0], sinkManagers, *argFrequency)
 	if managerErr != nil {
 		klog.Fatalf("Failed to create main manager: %v", managerErr)
 	}

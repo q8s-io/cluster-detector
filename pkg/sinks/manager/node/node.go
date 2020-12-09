@@ -1,26 +1,12 @@
-// Copyright 2015 Google Inc. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package node
 
 import (
 	"sync"
 	"time"
 
-	"github.com/prometheus/client_golang/prometheus"
-	"github.com/q8s-io/cluster-detector/pkg/core"
 	"k8s.io/klog"
+
+	"github.com/q8s-io/cluster-detector/pkg/entity"
 )
 
 const (
@@ -29,26 +15,9 @@ const (
 	SINK_MANAGER_NAME             = "NodeInspection-Manager"
 )
 
-var (
-	// Time spent exporting events to sink in milliseconds.
-	exporterDuration = prometheus.NewSummaryVec(
-		prometheus.SummaryOpts{
-			Namespace: "nodeInspection",
-			Subsystem: "exporter",
-			Name:      "duration_milliseconds",
-			Help:      "Time spent exporting events to sink in milliseconds.",
-		},
-		[]string{"exporter"},
-	)
-)
-
-func init() {
-	prometheus.MustRegister(exporterDuration)
-}
-
 type sinkHolder struct {
-	sink             core.NodeSink
-	nodeBatchChannel chan *core.NodeInspectionBatch
+	sink             entity.NodeSink
+	nodeBatchChannel chan *entity.NodeInspectionBatch
 	stopChannel      chan bool
 }
 
@@ -62,12 +31,12 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-func NewNodeSinkManager(sinks []core.NodeSink, exportEventsTimeout, stopTimeout time.Duration) (core.NodeSink, error) {
+func NewNodeSinkManager(sinks []entity.NodeSink, exportEventsTimeout, stopTimeout time.Duration) (entity.NodeSink, error) {
 	var sinkHolders []sinkHolder
 	for _, sink := range sinks {
 		sh := sinkHolder{
 			sink:             sink,
-			nodeBatchChannel: make(chan *core.NodeInspectionBatch),
+			nodeBatchChannel: make(chan *entity.NodeInspectionBatch),
 			stopChannel:      make(chan bool),
 		}
 		sinkHolders = append(sinkHolders, sh)
@@ -94,7 +63,7 @@ func NewNodeSinkManager(sinks []core.NodeSink, exportEventsTimeout, stopTimeout 
 }
 
 // Guarantees that the export will complete in exportEventsTimeout.
-func (this *sinkManager) ExportNodeInspection(data *core.NodeInspectionBatch) {
+func (this *sinkManager) ExportNodeInspection(data *entity.NodeInspectionBatch) {
 	var wg sync.WaitGroup
 	for _, sh := range this.sinkHolders {
 		wg.Add(1)
@@ -135,12 +104,6 @@ func (this *sinkManager) Stop() {
 	}
 }
 
-func export(s core.NodeSink, data *core.NodeInspectionBatch) {
-	startTime := time.Now()
-	defer func() {
-		exporterDuration.
-			WithLabelValues(s.Name()).
-			Observe(float64(time.Since(startTime)) / float64(time.Millisecond))
-	}()
+func export(s entity.NodeSink, data *entity.NodeInspectionBatch) {
 	s.ExportNodeInspection(data)
 }
