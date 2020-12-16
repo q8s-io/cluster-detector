@@ -7,7 +7,6 @@ import (
 	"k8s.io/client-go/tools/cache"
 
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
-	batch_v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	rbac "k8s.io/api/rbac/v1beta1"
@@ -71,15 +70,14 @@ func (harvester *EventClient) watch() {
 	// Outer loop, for reconnections
 	go harvester.normalWatch()
 	go harvester.deleteWatch()
-	//go harvester.jobWatch()
-	/*go harvester.namespaceWatch()
+	go harvester.namespaceWatch()
 	go harvester.comfigMapWatch()
 	go harvester.secretEventWatch()
 	go harvester.serviceEventWatch()
 	go harvester.ingressEventWatch()
 	go harvester.persistentVolumeEventWatch()
 	go harvester.serviceAccountEvent()
-	go harvester.clusterRoleEventWatch()*/
+	go harvester.clusterRoleEventWatch()
 	select {}
 }
 
@@ -219,71 +217,6 @@ func registDeleteHandler(informer cache.SharedIndexInformer,resourceType string)
 		},
 	})
 }
-
-func (harvester *EventClient) jobWatch(){
-	for {
-		// Do not write old events.
-		events, err := harvester.kubeClient.BatchV1().Jobs(corev1.NamespaceAll).List(metav1.ListOptions{})
-		if err != nil {
-			klog.Infof("Failed to load Job events: %v", err)
-			continue
-		}
-		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.BatchV1().Jobs(corev1.NamespaceAll).Watch(
-			metav1.ListOptions{
-				Watch:           true,
-				ResourceVersion: resourceVersion})
-		if err != nil {
-			klog.Infof("Failed to start watch for new NameSpace events: %v", err)
-			continue
-		}
-		watchChannel := watcher.ResultChan()
-		// Inner loop, for update processing.
-	innerLoop:
-		for {
-			select {
-			case watchUpdate, ok := <-watchChannel:
-				if !ok {
-					klog.Infof("Event watch channel closed")
-					break innerLoop
-				}
-				if watchUpdate.Type == watch.Error {
-					if status, ok := watchUpdate.Object.(*metav1.Status); ok {
-						klog.Infof("Error during watch: %#v", status)
-						break innerLoop
-					}
-					klog.Infof("Received unexpected error: %#v", watchUpdate.Object)
-					break innerLoop
-				}
-				if event, ok := watchUpdate.Object.(*batch_v1.Job); ok {
-					newEvent := &entity.EventInspection{
-						EventKind:         JobEvent,
-						EventNamespace:    event.Namespace,
-						EventResourceName: event.Name,
-						EventType:         string(watchUpdate.Type),
-						EventInfo:         *event,
-						EventTime: time.Now(),
-				//		EventUID: string(event.UID),
-					}
-					select {
-					case EventList <- newEvent:
-						// Ok, buffer not full.
-					default:
-						// Buffer full, need to drop the event.
-						klog.Info("Event buffer full, dropping event")
-					}
-				} else {
-					klog.Infof("Wrong object received: %v", watchUpdate)
-				}
-			case <-harvester.stopChannel:
-				watcher.Stop()
-				klog.Info("Event watching stopped")
-				return
-			}
-		}
-	}
-}
-
 
 
 func (harvester *EventClient) namespaceWatch() {

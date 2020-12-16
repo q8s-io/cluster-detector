@@ -17,7 +17,7 @@ speed = 10
 
 [DeleteInspectionConfig.KafkaDeleteConfig]
 enabled = false
-brokers = ["10.99.113.29:9092"]
+brokers = ["10.146.143.206:9092"]
 topic = "heapster-deletes"
 namespaces = ["lc"]
 kinds = ["Pod"]
@@ -28,7 +28,7 @@ speed = 10
 
 [NodeInspectionConfig.KafkaNodeConfig]
 enabled = false
-brokers = ["10.99.113.29:9092"]
+brokers = ["10.146.143.206:9092"]
 topic = "heapster-nodes"
 
 [PodInspectionConfig]
