@@ -16,7 +16,7 @@ func NewSourceFactory() *SourceFactory {
 	return &SourceFactory{}
 }
 
-func (_ *SourceFactory) BuildEvents(source config.Source) (*chan *LocalEventBuffer, error) {
+func (_ *SourceFactory) BuildEvents(source config.Source) (*chan *entity.EventInspection, error) {
 	requestURI, parseErr := url.ParseRequestURI(source.KubernetesURL)
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
@@ -28,8 +28,8 @@ func (_ *SourceFactory) BuildEvents(source config.Source) (*chan *LocalEventBuff
 	return src, err
 }
 
-func (_ *SourceFactory) BuildUnusedResource(source config.Source) ([]entity.DeleteInspectionSource, error) {
-	var result []entity.DeleteInspectionSource
+func (_ *SourceFactory) BuildUnusedResource(source config.Source) (* chan *entity.DeleteInspection, error) {
+//	var result []entity.DeleteInspectionSource
 	requestURI, parseErr := url.ParseRequestURI(source.KubernetesURL)
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
@@ -37,14 +37,14 @@ func (_ *SourceFactory) BuildUnusedResource(source config.Source) ([]entity.Dele
 	src, err := NewDeleteInspectionSource(requestURI)
 	if err != nil {
 		klog.Info("Failed to create %s: %v", source, err)
-	} else {
+	}/* else {
 		result = append(result, src)
-	}
-	return result, err
+	}*/
+	return src, err
 }
 
-func (_ *SourceFactory) BuildNodeInspection(source config.Source) ([]entity.NodeInspectionSource, error) {
-	var result []entity.NodeInspectionSource
+func (_ *SourceFactory) BuildNodeInspection(source config.Source) (* chan *entity.NodeInspection, error) {
+	//var result []entity.NodeInspectionSource
 	requestURI, parseErr := url.ParseRequestURI(source.KubernetesURL)
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
@@ -52,14 +52,14 @@ func (_ *SourceFactory) BuildNodeInspection(source config.Source) ([]entity.Node
 	src, err := NewNodeInspectionSource(requestURI)
 	if err != nil {
 		klog.Info("Failed to create %s: %v", source, err)
-	} else {
+	} /*else {
 		result = append(result, src)
-	}
-	return result, err
+	}*/
+	return src, err
 }
 
-func (_ *SourceFactory) BuildPodInspection(source config.Source) ([]entity.PodInspectionSource, error) {
-	var result []entity.PodInspectionSource
+func (_ *SourceFactory) BuildPodInspection(source config.Source) (* chan *entity.PodInspection, error) {
+	//var result []entity.PodInspectionSource
 	requestURI, parseErr := url.ParseRequestURI(source.KubernetesURL)
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
@@ -67,8 +67,8 @@ func (_ *SourceFactory) BuildPodInspection(source config.Source) ([]entity.PodIn
 	src, err := NewPodInspectionSource(requestURI)
 	if err != nil {
 		klog.Info("Failed to create %s: %v", source, err)
-	} else {
+	} /*else {
 		result = append(result, src)
-	}
-	return result, err
+	}*/
+	return src, err
 }

@@ -47,6 +47,7 @@ type kafkaSink struct {
 func (sink *kafkaSink) ProduceKafkaMessage(msgData interface{}) error {
 	start := time.Now()
 	msgJson, err := json.Marshal(msgData)
+	fmt.Println(string(msgJson))
 	if err != nil {
 		return fmt.Errorf("failed to transform the items to json : %s", err)
 	}

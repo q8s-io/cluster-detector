@@ -2,7 +2,6 @@ package kube
 
 import (
 	"context"
-	"fmt"
 	"log"
 	"net/url"
 	"time"
@@ -13,11 +12,9 @@ import (
 	cliresource "k8s.io/cli-runtime/pkg/resource"
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	"k8s.io/klog"
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	deletecore "github.com/q8s-io/cluster-detector/pkg/entity"
-	k8s "github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube/determiner"
 	resource "github.com/q8s-io/cluster-detector/pkg/provider/kube/unused"
 )
@@ -37,6 +34,8 @@ type DeleteInspectionSource struct {
 	dynamicClient dynamic.Interface
 }
 
+var UnusedResourceList chan *deletecore.DeleteInspection
+
 type runner struct {
 	namespace     string
 	allNamespaces bool
@@ -48,17 +47,21 @@ type runner struct {
 	result        *cliresource.Result
 }
 
-func newRunner() []*deletecore.DeleteInspection {
-	runner := &runner{
-		allNamespaces: true,
+func newRunner() /*[]*deletecore.DeleteInspection*/ {
+	for {
+		runner := &runner{
+			allNamespaces: true,
+		}
+		f := cmdutil.NewFactory(genericclioptions.NewConfigFlags(true))
+		_ = runner.Complete(f)
+		err := runner.Run(context.Background(), f)
+		if err != nil {
+			log.Fatalf("get deleteInspections error err:%v\n", err.Error())
+		}
+		/*fmt.Println("Unused Resource sum: ",len(UnusedResourceList))*/
+		time.Sleep(time.Second*60)
+		/*return dels*/
 	}
-	f := cmdutil.NewFactory(genericclioptions.NewConfigFlags(true))
-	_ = runner.Complete(f)
-	dels, err := runner.Run(context.Background(), f)
-	if err != nil {
-		log.Fatalf("get deleteInspections error err:%v\n", err.Error())
-	}
-	return dels
 }
 
 func (r *runner) Complete(f cmdutil.Factory) (err error) {
@@ -102,7 +105,7 @@ func (r *runner) completeResources(f cmdutil.Factory, resourceTypes string) erro
 	return r.result.Err()
 }
 
-func (r *runner) Run(ctx context.Context, f cmdutil.Factory) (del []*deletecore.DeleteInspection, err error) {
+func (r *runner) Run(ctx context.Context, f cmdutil.Factory) (/*del []*deletecore.DeleteInspection,*/ err error) {
 	if err := r.result.Visit(func(info *cliresource.Info, err error) error {
 		if info.Namespace == metav1.NamespaceSystem {
 			return nil
@@ -114,33 +117,39 @@ func (r *runner) Run(ctx context.Context, f cmdutil.Factory) (del []*deletecore.
 		if !ok {
 			return nil // skip deletion
 		}
-		del = append(del, &deletecore.DeleteInspection{
+		UnusedResourceList<- &deletecore.DeleteInspection{
 			Kind:      info.Object.GetObjectKind().GroupVersionKind().Kind,
 			NameSpace: info.Namespace,
 			Name:      info.Name,
-		})
+		}
+		/*del = append(del, &deletecore.DeleteInspection{
+			Kind:      info.Object.GetObjectKind().GroupVersionKind().Kind,
+			NameSpace: info.Namespace,
+			Name:      info.Name,
+		})*/
 		return nil
 	}); err != nil {
-		return nil, err
+		return  err
 	}
 	log.Println("delete over")
 	return
 }
 
-func NewDeleteInspectionSource(uri *url.URL) (*DeleteInspectionSource, error) {
-	kubeClient, err := k8s.GetKubernetesClient(uri)
+func NewDeleteInspectionSource(uri *url.URL) (* chan *deletecore.DeleteInspection, error) {
+	UnusedResourceList=make(chan *deletecore.DeleteInspection,LocalDeleteBufferSize)
+	/*kubeClient, err := k8s.GetKubernetesClient(uri)
 	dynamicClient, err := k8s.GetKubernetesDynamicClient(uri)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
 		return nil, err
-	}
-	result := DeleteInspectionSource{
-		localNodeBuffer: make(chan *deletecore.DeleteInspection, LocalDeleteBufferSize),
+	}*/
+	/*result := DeleteInspectionSource{
 		stopChannel:     make(chan struct{}),
 		clientset:       kubeClient,
 		dynamicClient:   dynamicClient,
-	}
-	return &result, nil
+	}*/
+	go newRunner()
+	return &UnusedResourceList, nil
 }
 
 func (delete *DeleteInspectionSource) GetNewDeleteInspection() *deletecore.DeleteInspectionBatch {
@@ -148,15 +157,15 @@ func (delete *DeleteInspectionSource) GetNewDeleteInspection() *deletecore.Delet
 		TimeStamp:   time.Now(),
 		Inspections: []*deletecore.DeleteInspection{},
 	}
-	delete.inspection()
+	//delete.inspection()
 	count := 0
 DeleteLoop:
 	for {
-		if count >= delete.num {
+		if count >= len(UnusedResourceList) {
 			break DeleteLoop
 		}
 		select {
-		case inspection := <-delete.localNodeBuffer:
+		case inspection := <-UnusedResourceList:
 			result.Inspections = append(result.Inspections, inspection)
 			count++
 		// 防止写入信道出现崩溃，及时退出。
@@ -167,11 +176,11 @@ DeleteLoop:
 	return &result
 }
 
-func (delete *DeleteInspectionSource) inspection() {
+/*func (delete *DeleteInspectionSource) inspection() {
 	dels := newRunner()
 	delete.num = len(dels)
 	for _, v := range dels {
-		fmt.Printf("%+v\n", *v)
+		//fmt.Printf("%+v\n", *v)
 		delete.localNodeBuffer <- v
 	}
-}
+}*/

@@ -2,12 +2,19 @@ package entity
 
 import (
 	"encoding/json"
+	//"github.com/q8s-io/cluster-detector/pkg/provider/kube"
 	"time"
-
-	"github.com/q8s-io/cluster-detector/pkg/metrics/core"
-
-	"k8s.io/api/core/v1"
 )
+
+type EventInspection struct {
+	EventKind         string
+	EventNamespace    string
+	EventResourceName string
+	EventType         string
+	EventTime		  time.Time
+	EventInfo         interface{}
+	//EventUID		  string
+}
 
 type EventBatch struct {
 	// List of events included in the batch.
@@ -26,7 +33,7 @@ type EventSink interface {
 	// Exports data to the external storage.
 	// The function should be synchronous/blocking and finish only after the given EventBatch was written.
 	// This will allow sink manager to push data only to these sinks that finished writing the previous data.
-	ExportEvents(*EventBatch)
+	ExportEvents(buffer *chan *EventInspection)
 	// Stops the sink at earliest convenience.
 	Stop()
 }
@@ -38,31 +45,31 @@ type EventSinkPoint struct {
 	EventTags      map[string]string
 }
 
-func (_ EventSinkPoint) getEventValue(event *v1.Event) (string, error) {
+func (_ EventSinkPoint) getEventValue(buffer *EventInspection) (string, error) {
 	// TODO: check whether indenting is required.
-	bytes, err := json.MarshalIndent(event, "", " ")
+	bytes, err := json.MarshalIndent(buffer, "", " ")
 	if err != nil {
 		return "", err
 	}
 	return string(bytes), nil
 }
 
-func (this EventSinkPoint) EventToPoint(event *v1.Event) (*EventSinkPoint, error) {
+func (this EventSinkPoint) EventToPoint(event *EventInspection) (*EventSinkPoint, error) {
 	value, err := this.getEventValue(event)
 	if err != nil {
 		return nil, err
 	}
 	point := EventSinkPoint{
-		EventTimestamp: event.LastTimestamp.Time.UTC(),
+		EventTimestamp: event.EventTime,//event.LastTimestamp.Time.UTC(),
 		EventValue:     value,
-		EventTags: map[string]string{
-			"eventID": string(event.UID),
-		},
+		/*EventTags: map[string]string{
+			"eventID": event.EventUID,
+		},*/
 	}
-	if event.InvolvedObject.Kind == "Pod" {
+	/*if event.EventKind == "Pod" {
 		point.EventTags[core.LabelPodId.Key] = string(event.InvolvedObject.UID)
 		point.EventTags[core.LabelPodName.Key] = event.InvolvedObject.Name
 	}
-	point.EventTags[core.LabelHostname.Key] = event.Source.Host
+	point.EventTags[core.LabelHostname.Key] = event.Source.Host*/
 	return &point, nil
 }

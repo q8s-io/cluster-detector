@@ -21,6 +21,6 @@ type DeleteInspectionSource interface {
 
 type DeleteSink interface {
 	Name() string
-	ExportDeleteInspection(batch *DeleteInspectionBatch)
+	ExportDeleteInspection(buffer *chan *DeleteInspection)
 	Stop()
 }

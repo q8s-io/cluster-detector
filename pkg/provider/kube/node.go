@@ -28,6 +28,8 @@ type NodeInspectionSource struct {
 	nodeClient  kubev1core.NodeInterface
 }
 
+var NodeList chan *nodecore.NodeInspection
+
 func (this *NodeInspectionSource) GetNewNodeInspection() *nodecore.NodeInspectionBatch {
 	result := nodecore.NodeInspectionBatch{
 		Timestamp:   time.Now(),
@@ -55,32 +57,37 @@ NodeLoop:
 }
 
 func (this *NodeInspectionSource) inspection() {
-	nodeList, listErr := this.nodeClient.List(metav1.ListOptions{})
-	if listErr != nil {
-		klog.Errorf("Failed to list Node: %s", listErr)
-	}
-	this.num = len(nodeList.Items)
-	for _, node := range nodeList.Items {
-		inspection := new(nodecore.NodeInspection)
-		inspection.Name = node.Name
-		isReady := false
-		for _, condition := range node.Status.Conditions {
-			if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
-				isReady = true
+	for {
+		nodeList, listErr := this.nodeClient.List(metav1.ListOptions{})
+		if listErr != nil {
+			klog.Errorf("Failed to list Node: %s", listErr)
+		}
+		this.num = len(nodeList.Items)
+		for _, node := range nodeList.Items {
+			inspection := new(nodecore.NodeInspection)
+			inspection.Name = node.Name
+			isReady := false
+			for _, condition := range node.Status.Conditions {
+				if condition.Type == v1.NodeReady && condition.Status == v1.ConditionTrue {
+					isReady = true
+				}
 			}
+			if isReady {
+				inspection.Status = "Ready"
+			} else {
+				inspection.Status = "NotReady"
+			}
+			inspection.Conditions = node.Status.Conditions
+			NodeList <- inspection
+			//	this.localNodeBuffer <- inspection
 		}
-		if isReady {
-			inspection.Status = "Ready"
-		} else {
-			inspection.Status = "NotReady"
-		}
-		inspection.Conditions = node.Status.Conditions
-		this.localNodeBuffer <- inspection
+		time.Sleep(time.Second*20)
 	}
 }
 
-func NewNodeInspectionSource(uri *url.URL) (*NodeInspectionSource, error) {
+func NewNodeInspectionSource(uri *url.URL) (* chan *nodecore.NodeInspection, error) {
 	kubeClient, err := kubernetes.GetKubernetesClient(uri)
+	NodeList = make(chan *nodecore.NodeInspection,LocalNodesBufferSize)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
 		return nil, err
@@ -91,5 +98,6 @@ func NewNodeInspectionSource(uri *url.URL) (*NodeInspectionSource, error) {
 		stopChannel:     make(chan struct{}),
 		nodeClient:      nodeClient,
 	}
-	return &result, nil
+	go result.inspection()
+	return &NodeList, nil
 }

@@ -33,7 +33,7 @@ func (_ *SinkFactory) BuildPodKafka(kafkaPodConfig *config.KafkaPodConfig) (enti
 	return webhook.NewPodWebHookSink(webHookConfig)
 }*/
 
-func (_ *SinkFactory) BuildDeleteKafka(kafkaDeleteConfig *config.Kafka) (entity.DeleteSink, error) {
+func (_ *SinkFactory) BuildDeleteKafka(kafkaDeleteConfig *config.KafkaDeleteConfig) (entity.DeleteSink, error) {
 	return kafka.NewDeleteKafkaSink(kafkaDeleteConfig)
 }
 

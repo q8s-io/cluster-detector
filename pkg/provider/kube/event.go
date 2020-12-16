@@ -1,8 +1,13 @@
 package kube
 
 import (
-	"net/url"
+	//"fmt"
+	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
+	batch_v1 "k8s.io/api/batch/v1"
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	rbac "k8s.io/api/rbac/v1beta1"
@@ -10,14 +15,23 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
-
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
+	"net/url"
+	"time"
 )
 
 const (
 	// Number of object pointers.
 	// Big enough so it won't be hit anytime soon with reasonable GetNewEvents frequency.
 	LocalEventsBufferSize = 100000
+	DELETE = "Deleted"
+	JobEvent ="Job"
+	PodEvent ="Pod"
+	DeploymentEvent="Deployment"
+	ReplicationControllerEvent="ReplicationController"
+	NodeEvent="Node"
+	ReplicaSetEvent="ReplicaSet"
+	DaemonSetEvent="DaemonSet"
+	StatefulSetEvent="StatefulSet"
 	NameSpaceEvent        = "NameSpace"
 	ConfigMapEvent        = "ConfigMap"
 	SecretEvent           = "Secret"
@@ -33,18 +47,12 @@ type EventClient struct {
 	stopChannel chan struct{}
 }
 
-type LocalEventBuffer struct {
-	eventKind         string
-	eventNamespace    string
-	eventResourceName string
-	eventType         string
-	eventInfo         interface{}
-}
 
-var EventList chan *LocalEventBuffer
 
-func NewKubernetesSource(uri *url.URL) (*chan *LocalEventBuffer, error) {
-	EventList = make(chan *LocalEventBuffer, LocalEventsBufferSize)
+var EventList chan *entity.EventInspection
+
+func NewKubernetesSource(uri *url.URL) (*chan *entity.EventInspection, error) {
+	EventList = make(chan *entity.EventInspection, LocalEventsBufferSize)
 
 	kubeClient, err := kubernetes.GetKubernetesClient(uri)
 	if err != nil {
@@ -56,22 +64,22 @@ func NewKubernetesSource(uri *url.URL) (*chan *LocalEventBuffer, error) {
 		stopChannel: make(chan struct{}),
 	}
 	go eventClient.watch()
-
 	return &EventList, nil
 }
 
 func (harvester *EventClient) watch() {
 	// Outer loop, for reconnections
 	go harvester.normalWatch()
-	go harvester.namespaceWatch()
+	go harvester.deleteWatch()
+	//go harvester.jobWatch()
+	/*go harvester.namespaceWatch()
 	go harvester.comfigMapWatch()
 	go harvester.secretEventWatch()
 	go harvester.serviceEventWatch()
 	go harvester.ingressEventWatch()
 	go harvester.persistentVolumeEventWatch()
 	go harvester.serviceAccountEvent()
-	go harvester.clusterRoleEventWatch()
-
+	go harvester.clusterRoleEventWatch()*/
 	select {}
 }
 
@@ -111,12 +119,14 @@ func (harvester *EventClient) normalWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.Event); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         event.InvolvedObject.Kind,
-						eventNamespace:    event.InvolvedObject.Namespace,
-						eventResourceName: event.InvolvedObject.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent :=&entity.EventInspection{
+						EventKind:         event.InvolvedObject.Kind,
+						EventNamespace:    event.InvolvedObject.Namespace,
+						EventResourceName: event.InvolvedObject.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+					//	EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -136,6 +146,145 @@ func (harvester *EventClient) normalWatch() {
 		}
 	}
 }
+
+func (harvester *EventClient) deleteWatch(){
+	//var deleteinformer []cache.SharedIndexInformer
+	stop:=make(chan struct{})
+	defer close(stop)
+	factory:=informers.NewSharedInformerFactory(harvester.kubeClient,30)
+	//TODO pod
+	podInformer:=factory.Core().V1().Pods()
+	informer1:=podInformer.Informer()
+	registDeleteHandler(informer1,PodEvent)
+	//TODO job
+	jobInformer:=factory.Batch().V1().Jobs()
+	informer2:=jobInformer.Informer()
+	registDeleteHandler(informer2,JobEvent)
+	//TODO rs
+	rsInformer:=factory.Apps().V1().ReplicaSets()
+	informer3:=rsInformer.Informer()
+	registDeleteHandler(informer3,ReplicaSetEvent)
+	//TODO rc
+	rcInformer:=factory.Core().V1().ReplicationControllers()
+	informer4:=rcInformer.Informer()
+	registDeleteHandler(informer4,ReplicationControllerEvent)
+	//TODO DaemonSet
+	dsInformer:=factory.Apps().V1().DaemonSets()
+	informer5:=dsInformer.Informer()
+	registDeleteHandler(informer5,DaemonSetEvent)
+	//TODO Deployment
+	dpInformer:=factory.Apps().V1().Deployments()
+	informer6:=dpInformer.Informer()
+	registDeleteHandler(informer6,DeploymentEvent)
+	//TODO Node
+	nodeInformer:=factory.Core().V1().Nodes()
+	informer7:=nodeInformer.Informer()
+	registDeleteHandler(informer7,NodeEvent)
+	//TODO StatefulSet
+	sfInformer:=factory.Apps().V1().StatefulSets()
+	informer8:=sfInformer.Informer()
+	registDeleteHandler(informer8,StatefulSetEvent)
+	go factory.Start(stop)
+	<-stop
+}
+
+
+func registDeleteHandler(informer cache.SharedIndexInformer,resourceType string){
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {
+			key,err:=cache.MetaNamespaceKeyFunc(obj)
+			if err!=nil{
+				klog.Infof("can't get delete resource namespace and name\n")
+			}
+			nameSpace,name,err:=cache.SplitMetaNamespaceKey(key)
+			if err!=nil{
+				klog.Infof("can't split delete resource namespace and name\n")
+			}
+
+			inspection:=&entity.EventInspection{
+				EventKind:         resourceType,
+				EventNamespace:    nameSpace,
+				EventResourceName: name,
+				EventType:         DELETE,
+				EventTime:         time.Time{},
+				EventInfo:         obj,
+				//EventUID:          cache.,
+			}
+			select {
+			case EventList<-inspection:
+				//OK not full
+			default:
+				klog.Info("Event buffer full, dropping event")
+			}
+		},
+	})
+}
+
+func (harvester *EventClient) jobWatch(){
+	for {
+		// Do not write old events.
+		events, err := harvester.kubeClient.BatchV1().Jobs(corev1.NamespaceAll).List(metav1.ListOptions{})
+		if err != nil {
+			klog.Infof("Failed to load Job events: %v", err)
+			continue
+		}
+		resourceVersion := events.ResourceVersion
+		watcher, err := harvester.kubeClient.BatchV1().Jobs(corev1.NamespaceAll).Watch(
+			metav1.ListOptions{
+				Watch:           true,
+				ResourceVersion: resourceVersion})
+		if err != nil {
+			klog.Infof("Failed to start watch for new NameSpace events: %v", err)
+			continue
+		}
+		watchChannel := watcher.ResultChan()
+		// Inner loop, for update processing.
+	innerLoop:
+		for {
+			select {
+			case watchUpdate, ok := <-watchChannel:
+				if !ok {
+					klog.Infof("Event watch channel closed")
+					break innerLoop
+				}
+				if watchUpdate.Type == watch.Error {
+					if status, ok := watchUpdate.Object.(*metav1.Status); ok {
+						klog.Infof("Error during watch: %#v", status)
+						break innerLoop
+					}
+					klog.Infof("Received unexpected error: %#v", watchUpdate.Object)
+					break innerLoop
+				}
+				if event, ok := watchUpdate.Object.(*batch_v1.Job); ok {
+					newEvent := &entity.EventInspection{
+						EventKind:         JobEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+				//		EventUID: string(event.UID),
+					}
+					select {
+					case EventList <- newEvent:
+						// Ok, buffer not full.
+					default:
+						// Buffer full, need to drop the event.
+						klog.Info("Event buffer full, dropping event")
+					}
+				} else {
+					klog.Infof("Wrong object received: %v", watchUpdate)
+				}
+			case <-harvester.stopChannel:
+				watcher.Stop()
+				klog.Info("Event watching stopped")
+				return
+			}
+		}
+	}
+}
+
+
 
 func (harvester *EventClient) namespaceWatch() {
 	for {
@@ -173,12 +322,14 @@ func (harvester *EventClient) namespaceWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.Namespace); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         NameSpaceEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         NameSpaceEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+					//	EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -235,12 +386,14 @@ func (harvester *EventClient) comfigMapWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.ConfigMap); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         ConfigMapEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         ConfigMapEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+				//		EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -297,12 +450,14 @@ func (harvester *EventClient) secretEventWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.Secret); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         SecretEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         SecretEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+				//		EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -359,12 +514,14 @@ func (harvester *EventClient) serviceEventWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.Service); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         ServiceEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         ServiceEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+			//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -421,12 +578,14 @@ func (harvester *EventClient) ingressEventWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*extensions.Ingress); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         IngressEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         IngressEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+			//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -483,12 +642,14 @@ func (harvester *EventClient) persistentVolumeEventWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.PersistentVolume); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         PersistentVolumeEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         PersistentVolumeEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+			//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -545,12 +706,14 @@ func (harvester *EventClient) serviceAccountEvent() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.ServiceAccount); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         ServiceAccountEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         ServiceAccountEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+			//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -607,12 +770,14 @@ func (harvester *EventClient) clusterRoleEventWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*rbac.ClusterRole); ok {
-					newEvent := &LocalEventBuffer{
-						eventKind:         ClusterRoleEvent,
-						eventNamespace:    event.Namespace,
-						eventResourceName: event.Name,
-						eventType:         string(watchUpdate.Type),
-						eventInfo:         *event,
+					newEvent := &entity.EventInspection{
+						EventKind:         ClusterRoleEvent,
+						EventNamespace:    event.Namespace,
+						EventResourceName: event.Name,
+						EventType:         string(watchUpdate.Type),
+						EventInfo:         *event,
+						EventTime: time.Now(),
+				//		EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:

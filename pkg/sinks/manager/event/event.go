@@ -31,7 +31,7 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-func NewEventSinkManager(sinks []entity.EventSink, exportEventsTimeout, stopTimeout time.Duration) (entity.EventSink, error) {
+/*func NewEventSinkManager(sinks []entity.EventSink, exportEventsTimeout, stopTimeout time.Duration) (entity.EventSink, error) {
 	var sinkHolders []sinkHolder
 	for _, sink := range sinks {
 		sh := sinkHolder{
@@ -60,7 +60,7 @@ func NewEventSinkManager(sinks []entity.EventSink, exportEventsTimeout, stopTime
 		exportEventsTimeout: exportEventsTimeout,
 		stopTimeout:         stopTimeout,
 	}, nil
-}
+}*/
 
 // Guarantees that the export will complete in exportEventsTimeout.
 func (this *sinkManager) ExportEvents(data *entity.EventBatch) {
@@ -104,6 +104,6 @@ func (this *sinkManager) Stop() {
 	}
 }
 
-func export(s entity.EventSink, data *entity.EventBatch) {
+func export(s entity.EventSink, data *chan *entity.EventInspection) {
 	s.ExportEvents(data)
 }

@@ -31,7 +31,7 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-func NewPodSinkManager(sinks []entity.PodSink, exportPodsTimeout, stopTimeout time.Duration) (entity.PodSink, error) {
+/*func NewPodSinkManager(sinks []entity.PodSink, exportPodsTimeout, stopTimeout time.Duration) (entity.PodSink, error) {
 	var sinkHolders []sinkHolder
 	for _, sink := range sinks {
 		sh := sinkHolder{
@@ -60,7 +60,7 @@ func NewPodSinkManager(sinks []entity.PodSink, exportPodsTimeout, stopTimeout ti
 		exportNodesTimeout: exportPodsTimeout,
 		stopTimeout:        stopTimeout,
 	}, nil
-}
+}*/
 
 // Guarantees that the export will complete in exportEventsTimeout.
 func (this *sinkManager) ExportPodInspection(data *entity.PodInspectionBatch) {
@@ -104,6 +104,6 @@ func (this *sinkManager) Stop() {
 	}
 }
 
-func export(s entity.PodSink, data *entity.PodInspectionBatch) {
+/*func export(s entity.PodSink, data *entity.PodInspectionBatch) {
 	s.ExportPodInspection(data)
-}
+}*/

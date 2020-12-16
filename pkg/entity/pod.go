@@ -24,7 +24,7 @@ type PodInspectionSource interface {
 
 type PodSink interface {
 	Name() string
-	ExportPodInspection(*PodInspectionBatch)
+	ExportPodInspection(*chan *PodInspection)
 	Stop()
 }
 

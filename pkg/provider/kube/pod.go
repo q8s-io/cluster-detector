@@ -24,12 +24,14 @@ var timeoutThreshold = config.Config.PodInspectionConfig.TimeoutThreshold
 type PodInspectionSource struct {
 	// Large local buffer, periodically read.
 	// channel's element size does not exceed 65535 bytes, so the pointer is used
-	localPodBuffer chan *entity.PodInspection
+	//localPodBuffer chan *entity.PodInspection
 	// count pod num
 	num         int
 	stopChannel chan struct{}
 	podsClient  kubev1core.PodInterface
 }
+
+var PodList chan *entity.PodInspection
 
 func (this *PodInspectionSource) GetNewPodInspection() *entity.PodInspectionBatch {
 	result := entity.PodInspectionBatch{
@@ -46,7 +48,7 @@ PodLoop:
 			break PodLoop
 		}
 		select {
-		case inspection := <-this.localPodBuffer:
+		case inspection := <-PodList:
 			result.Inspections = append(result.Inspections, inspection)
 			count++
 		// 防止写入信道出现崩溃，及时退出。
@@ -58,16 +60,20 @@ PodLoop:
 }
 
 func (this *PodInspectionSource) inspection() {
-	podList, listErr := this.podsClient.List(metav1.ListOptions{})
-	if listErr != nil {
-		klog.Errorf("Failed to list Pod: %s", listErr)
-	}
-	this.num = len(podList.Items)
-	for _, pod := range podList.Items {
-		podInspection := this.filter(&pod)
-		if podInspection != nil {
-			this.localPodBuffer <- podInspection
+	for {
+		podList, listErr := this.podsClient.List(metav1.ListOptions{})
+		if listErr != nil {
+			klog.Errorf("Failed to list Pod: %s", listErr)
 		}
+		this.num = len(podList.Items)
+		for _, pod := range podList.Items {
+			podInspection := this.filter(&pod)
+			if podInspection != nil {
+				//this.localPodBuffer <- podInspection
+				PodList <- podInspection
+			}
+		}
+		time.Sleep(time.Second*20)
 	}
 }
 
@@ -98,19 +104,20 @@ func (this *PodInspectionSource) filter(pod *v1.Pod) *entity.PodInspection {
 	return podInspection
 }
 
-func NewPodInspectionSource(uri *url.URL) (*PodInspectionSource, error) {
+func NewPodInspectionSource(uri *url.URL) (*chan *entity.PodInspection, error) {
 	kubeClient, err := kubernetes.GetKubernetesClient(uri)
+	PodList = make(chan *entity.PodInspection,LocalPodsSize)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
 		return nil, err
 	}
 	podsClient := kubeClient.CoreV1().Pods("")
 	result := PodInspectionSource{
-		localPodBuffer: make(chan *entity.PodInspection, LocalPodsSize),
 		stopChannel:    make(chan struct{}),
 		podsClient:     podsClient,
 	}
-	return &result, nil
+	go result.inspection()
+	return &PodList, nil
 }
 
 // GetPodStatus returns the pod state

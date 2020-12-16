@@ -21,7 +21,7 @@ type Source struct {
 type EventsConfig struct {
 	Enabled            bool `toml:"enabled"`
 	KafkaEventConfig   KafkaEventConfig
-	WebHookEventConfig WebHookEventConfig
+	//WebHookEventConfig WebHookEventConfig
 }
 
 // NodeInspection config
@@ -29,13 +29,13 @@ type NodeInspectionConfig struct {
 	Enabled           bool `toml:"enabled"`
 	Speed             int  `toml:"speed"`
 	KafkaNodeConfig   Kafka
-	WebHookNodeConfig WebHook
+//	WebHookNodeConfig WebHook
 }
 
 type DeleteInspectionConfig struct {
 	Enabled           bool `toml:"enabled"`
 	Speed             int  `toml:"speed"`
-	KafkaDeleteConfig Kafka
+	KafkaDeleteConfig KafkaDeleteConfig
 }
 
 // PodInspection config
@@ -44,7 +44,7 @@ type PodInspectionConfig struct {
 	Speed            int  `toml:"speed"`
 	TimeoutThreshold int  `toml:"timeout_threshold"`
 	KafkaPodConfig   KafkaPodConfig
-	WebHookPodConfig WebHookPodConfig
+	//WebHookPodConfig WebHookPodConfig
 }
 
 type ServiceInspectionConfig struct {
@@ -72,7 +72,13 @@ type KafkaPodConfig struct {
 // kafkaEventSink filter
 type KafkaEventConfig struct {
 	Kafka
-	Level      string   `toml:"level" json:"level"`
+	//Level      string   `toml:"level" json:"level"`
+	Namespaces []string `toml:"namespaces" json:"namespaces"`
+	Kinds      []string `toml:"kinds" json:"kinds"`
+}
+
+type KafkaDeleteConfig struct {
+	Kafka
 	Namespaces []string `toml:"namespaces" json:"namespaces"`
 	Kinds      []string `toml:"kinds" json:"kinds"`
 }
@@ -91,7 +97,7 @@ type WebHookPodConfig struct {
 // webHookSink filter
 type WebHookEventConfig struct {
 	WebHook
-	Level      string   `toml:"level" json:"level"`
+	//Level      string   `toml:"level" json:"level"`
 	Namespaces []string `toml:"namespaces" json:"namespaces"`
 	Kinds      []string `toml:"kinds" json:"kinds"`
 	Reason     []string `toml:"reason" json:"reason"`

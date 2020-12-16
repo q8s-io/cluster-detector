@@ -35,18 +35,18 @@ func Run() {
 	flag.Parse()
 
 	// Start watch resource of cluster
-	//if config.Config.EventsConfig.Enabled == true {
-	//	go RunEventsWatch()
-	//}
+	if config.Config.EventsConfig.Enabled == true {
+		go RunEventsWatch()
+	}
 	if config.Config.DeleteInspectionConfig.Enabled == true {
 		go RunUnusedInspection()
 	}
-	//if configs.Config.NodeInspectionConfig.Enabled == true {
-	//	go RunNodeInspection()
-	//}
-	//if configs.Config.PodInspectionConfig.Enabled == true {
-	//	go RunPodInspection()
-	//}
+	if config.Config.NodeInspectionConfig.Enabled == true {
+		go RunNodeInspection()
+	}
+	if config.Config.PodInspectionConfig.Enabled == true {
+		go RunPodInspection()
+	}
 
 	go startHTTPServer()
 

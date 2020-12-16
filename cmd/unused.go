@@ -1,6 +1,9 @@
 package cmd
 
 import (
+	"fmt"
+	"github.com/q8s-io/cluster-detector/pkg/sinks"
+	"github.com/q8s-io/cluster-detector/pkg/sinks/kafka"
 	"log"
 
 	"k8s.io/klog"
@@ -11,9 +14,9 @@ import (
 
 func RunUnusedInspection() {
 	argSource := config.Config.Source
-	argKafkaSink := &config.Config.EventsConfig.KafkaEventConfig
-	argWebHookSink := &config.Config.EventsConfig.WebHookEventConfig
-	klog.Info(argSource.KubernetesURL, argKafkaSink, argWebHookSink)
+	argKafkaSink := &config.Config.DeleteInspectionConfig.KafkaDeleteConfig
+	//argWebHookSink := &config.Config.EventsConfig.WebHookEventConfig
+	klog.Info(argSource.KubernetesURL, argKafkaSink)
 
 	sourceFactory := kube.NewSourceFactory()
 	eventResources, err := sourceFactory.BuildUnusedResource(argSource)
@@ -21,18 +24,24 @@ func RunUnusedInspection() {
 		klog.Info("Failed to create sources: %v", err)
 	}
 
-	log.Println(eventResources)
-	//for i := range *eventResources {
-	//	log.Println(i)
-	//}
-
-	//sinksFactory := sinks.NewSinkFactory()
+	//log.Println(eventResources)
+	/*for i := range *eventResources {
+		log.Println(i)
+	}*/
+	sinksFactory := sinks.NewSinkFactory()
 	//var sinkList []entity.DeleteSink
-	//if argKafkaSink.Enabled == true {
-	//	kafkaSink, kafkaErr := sinksFactory.BuildDeleteKafka(argKafkaSink)
-	//	if kafkaErr != nil {
-	//		klog.Fatalf("Failed to create kafkaSink: %v", kafkaErr)
-	//	}
+	if argKafkaSink.Enabled == true {
+		kafkaSink, kafkaErr := sinksFactory.BuildDeleteKafka(argKafkaSink)
+		if kafkaErr != nil {
+			klog.Fatalf("Failed to create kafkaSink: %v", kafkaErr)
+		}
+		kafkaSink.ExportDeleteInspection(eventResources)
+	}
+	fmt.Println("--------------KafKa Deleted Inspections--------------")
+	for i := range kafka.KafkaDeleteInspection {
+		log.Println(i)
+	}
+	klog.Info("Starting unused")
 	//	sinkList = append(sinkList, kafkaSink)
 	//}
 	//for _, sink := range sinkList {
