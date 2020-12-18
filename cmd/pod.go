@@ -1,12 +1,13 @@
 package cmd
 
 import (
-	"fmt"
+	"log"
+
+	"k8s.io/klog"
+
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube"
 	"github.com/q8s-io/cluster-detector/pkg/sinks"
-	"k8s.io/klog"
-	"log"
 )
 
 func RunPodInspection() {
@@ -28,7 +29,7 @@ func RunPodInspection() {
 		}
 		kafkaSink.ExportPodInspection(podResources)
 	}
-	fmt.Println("--------------Pod Inspections--------------")
+	log.Println("--------------Pod Inspections--------------")
 	for i := range *podResources {
 		log.Println(i)
 	}

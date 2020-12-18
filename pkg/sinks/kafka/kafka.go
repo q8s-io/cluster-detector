@@ -85,7 +85,6 @@ func (sink *eventKafkaSink) ExportEvents(eventList *chan *entity.EventInspection
 	go func() {
 		for event := range *eventList {
 			if !sink.skipEvent(event) {
-				fmt.Println(event.EventNamespace, "/", event.EventKind,"/",event.EventType)
 				KafkaEventInspection <- event
 			}
 		}
@@ -218,7 +217,7 @@ func (sink *deleteKafkaSink)ExportDeleteInspection(deleteList *chan *entity.Dele
 	go func() {
 		for event := range *deleteList {
 			if !sink.skipSource(event) {
-				fmt.Println(event.NameSpace, "/", event.Kind,"/",event.Name)
+			//	fmt.Println(event.NameSpace, "/", event.Kind,"/",event.Name)
 				KafkaDeleteInspection <- event
 			}
 		}
