@@ -47,7 +47,7 @@ type runner struct {
 	result        *cliresource.Result
 }
 
-func newRunner() /*[]*deletecore.DeleteInspection*/ {
+func newRunner() {
 	for {
 		runner := &runner{
 			allNamespaces: true,
@@ -59,7 +59,7 @@ func newRunner() /*[]*deletecore.DeleteInspection*/ {
 			log.Fatalf("get deleteInspections error err:%v\n", err.Error())
 		}
 		/*fmt.Println("Unused Resource sum: ",len(UnusedResourceList))*/
-		time.Sleep(time.Second*60)
+		time.Sleep(time.Second * 60)
 		/*return dels*/
 	}
 }
@@ -105,7 +105,7 @@ func (r *runner) completeResources(f cmdutil.Factory, resourceTypes string) erro
 	return r.result.Err()
 }
 
-func (r *runner) Run(ctx context.Context, f cmdutil.Factory) (/*del []*deletecore.DeleteInspection,*/ err error) {
+func (r *runner) Run(ctx context.Context, f cmdutil.Factory) ( /*del []*deletecore.DeleteInspection,*/ err error) {
 	if err := r.result.Visit(func(info *cliresource.Info, err error) error {
 		if info.Namespace == metav1.NamespaceSystem {
 			return nil
@@ -117,37 +117,21 @@ func (r *runner) Run(ctx context.Context, f cmdutil.Factory) (/*del []*deletecor
 		if !ok {
 			return nil // skip deletion
 		}
-		UnusedResourceList<- &deletecore.DeleteInspection{
+		UnusedResourceList <- &deletecore.DeleteInspection{
 			Kind:      info.Object.GetObjectKind().GroupVersionKind().Kind,
 			NameSpace: info.Namespace,
 			Name:      info.Name,
 		}
-		/*del = append(del, &deletecore.DeleteInspection{
-			Kind:      info.Object.GetObjectKind().GroupVersionKind().Kind,
-			NameSpace: info.Namespace,
-			Name:      info.Name,
-		})*/
 		return nil
 	}); err != nil {
-		return  err
+		return err
 	}
 	log.Println("delete over")
 	return
 }
 
-func NewDeleteInspectionSource(uri *url.URL) (* chan *deletecore.DeleteInspection, error) {
-	UnusedResourceList=make(chan *deletecore.DeleteInspection,LocalDeleteBufferSize)
-	/*kubeClient, err := k8s.GetKubernetesClient(uri)
-	dynamicClient, err := k8s.GetKubernetesDynamicClient(uri)
-	if err != nil {
-		klog.Errorf("Failed to create kubernetes client, because of %v", err)
-		return nil, err
-	}*/
-	/*result := DeleteInspectionSource{
-		stopChannel:     make(chan struct{}),
-		clientset:       kubeClient,
-		dynamicClient:   dynamicClient,
-	}*/
+func NewDeleteInspectionSource(uri *url.URL) (*chan *deletecore.DeleteInspection, error) {
+	UnusedResourceList = make(chan *deletecore.DeleteInspection, LocalDeleteBufferSize)
 	go newRunner()
 	return &UnusedResourceList, nil
 }
@@ -175,12 +159,3 @@ DeleteLoop:
 	}
 	return &result
 }
-
-/*func (delete *DeleteInspectionSource) inspection() {
-	dels := newRunner()
-	delete.num = len(dels)
-	for _, v := range dels {
-		//fmt.Printf("%+v\n", *v)
-		delete.localNodeBuffer <- v
-	}
-}*/

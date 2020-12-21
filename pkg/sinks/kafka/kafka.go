@@ -1,11 +1,10 @@
 package kafka
 
 import (
-	"fmt"
 	"strings"
 	"sync"
 
-	//"k8s.io/api/core/v1"
+	// "k8s.io/api/core/v1"
 	"k8s.io/klog"
 
 	"github.com/q8s-io/cluster-detector/pkg/entity"
@@ -14,18 +13,18 @@ import (
 )
 
 const (
-	LocalBufferSize = 100000
-	EVENT_KAFKA_SINK     = "EventKafkaSink"
-	NODE_KAFKA_SINK      = "NodeKafkaSink"
-	POD_KAFKA_SINK       = "PodKafkaSink"
-	DELETE_KAFKA_SINK    = "DeleteKafkaSink"
-	WARNING          int = 2
-	NORMAL           int = 1
+	LocalBufferSize       = 100000
+	EVENT_KAFKA_SINK      = "EventKafkaSink"
+	NODE_KAFKA_SINK       = "NodeKafkaSink"
+	POD_KAFKA_SINK        = "PodKafkaSink"
+	DELETE_KAFKA_SINK     = "DeleteKafkaSink"
+	WARNING           int = 2
+	NORMAL            int = 1
 )
 
 var (
-	KafkaEventInspection chan *entity.EventInspection
-	KafkaPodInspection chan *entity.PodInspection
+	KafkaEventInspection  chan *entity.EventInspection
+	KafkaPodInspection    chan *entity.PodInspection
 	KafkaDeleteInspection chan *entity.DeleteInspection
 )
 
@@ -41,8 +40,6 @@ type eventKafkaSink struct {
 	kafkaSink  *kafkaSink
 }
 
-
-
 func (sink *eventKafkaSink) Name() string {
 	return EVENT_KAFKA_SINK
 }
@@ -53,35 +50,35 @@ func (sink *eventKafkaSink) Stop() {
 
 // filter event by given conditions
 func (sink *eventKafkaSink) skipEvent(buffer *entity.EventInspection) bool {
-	if sink.namespaces != nil && buffer.EventNamespace!=""{
-		skip:=true
-		for _,namespace:=range sink.namespaces{
-			if namespace == buffer.EventNamespace{
-				skip =false
+	if sink.namespaces != nil && buffer.EventNamespace != "" {
+		skip := true
+		for _, namespace := range sink.namespaces {
+			if namespace == buffer.EventNamespace {
+				skip = false
 			}
 		}
-		if skip{
+		if skip {
 			return true
 		}
 	}
-	if sink.kinds !=nil{
-		skip:=true
-		for _,kind:=range sink.kinds{
-			if strings.ToLower(kind)==strings.ToLower(buffer.EventKind){
-				skip=false
+	if sink.kinds != nil {
+		skip := true
+		for _, kind := range sink.kinds {
+			if strings.ToLower(kind) == strings.ToLower(buffer.EventKind) {
+				skip = false
 			}
 		}
-		if skip{
+		if skip {
 			return true
 		}
 	}
 	return false
 }
 
-func (sink *eventKafkaSink) ExportEvents(eventList *chan *entity.EventInspection){
+func (sink *eventKafkaSink) ExportEvents(eventList *chan *entity.EventInspection) {
 	sink.kafkaSink.Lock()
 	defer sink.kafkaSink.Unlock()
-	KafkaEventInspection =make(chan *entity.EventInspection,LocalBufferSize)
+	KafkaEventInspection = make(chan *entity.EventInspection, LocalBufferSize)
 	go func() {
 		for event := range *eventList {
 			if !sink.skipEvent(event) {
@@ -164,13 +161,13 @@ func (sink *podKafkaSink) ExportPodInspection(podBatch *chan *entity.PodInspecti
 	sink.kafkaSink.Lock()
 	defer sink.kafkaSink.Unlock()
 	KafkaPodInspection = make(chan *entity.PodInspection, LocalBufferSize)
-	go func(){
+	go func() {
 		for inspection := range *podBatch {
 			skip := sink.namespaces.SkipPod(inspection)
-			if skip {
-				continue
+			//fmt.Println(skip,"  ",inspection.Namespace)
+			if !skip {
+				KafkaPodInspection <- inspection
 			}
-			KafkaPodInspection <- inspection
 		}
 	}()
 }
@@ -194,7 +191,6 @@ func NewPodKafkaSink(kafkaPodConfig *config.KafkaPodConfig) (entity.PodSink, err
 	return podKafkaSink, nil
 }
 
-
 type deleteKafkaSink struct {
 	level      int
 	namespaces []string
@@ -202,49 +198,49 @@ type deleteKafkaSink struct {
 	kafkaSink  *kafkaSink
 }
 
-func (sink *deleteKafkaSink)Name()string{
+func (sink *deleteKafkaSink) Name() string {
 	return DELETE_KAFKA_SINK
 }
 
-func (sink *deleteKafkaSink)Stop(){
+func (sink *deleteKafkaSink) Stop() {
 	return
 }
 
-func (sink *deleteKafkaSink)ExportDeleteInspection(deleteList *chan *entity.DeleteInspection){
+func (sink *deleteKafkaSink) ExportDeleteInspection(deleteList *chan *entity.DeleteInspection) {
 	sink.kafkaSink.Lock()
 	defer sink.kafkaSink.Unlock()
-	KafkaDeleteInspection =make(chan *entity.DeleteInspection,LocalBufferSize)
+	KafkaDeleteInspection = make(chan *entity.DeleteInspection, LocalBufferSize)
 	go func() {
 		for event := range *deleteList {
 			if !sink.skipSource(event) {
-			//	fmt.Println(event.NameSpace, "/", event.Kind,"/",event.Name)
+				//	fmt.Println(event.NameSpace, "/", event.Kind,"/",event.Name)
 				KafkaDeleteInspection <- event
 			}
 		}
 	}()
 }
 
-func (sink *deleteKafkaSink)skipSource(buffer *entity.DeleteInspection)bool{
-	fmt.Println(buffer)
-	if sink.namespaces != nil && buffer.NameSpace!=""{
-		skip:=true
-		for _,namespace:=range sink.namespaces{
-			if namespace == buffer.NameSpace{
-				skip =false
+func (sink *deleteKafkaSink) skipSource(buffer *entity.DeleteInspection) bool {
+	//fmt.Println(buffer)
+	if sink.namespaces != nil && buffer.NameSpace != "" {
+		skip := true
+		for _, namespace := range sink.namespaces {
+			if namespace == buffer.NameSpace {
+				skip = false
 			}
 		}
-		if skip{
+		if skip {
 			return true
 		}
 	}
-	if sink.kinds !=nil{
-		skip:=true
-		for _,kind:=range sink.kinds{
-			if strings.ToLower(kind)==strings.ToLower(buffer.Kind){
-				skip=false
+	if sink.kinds != nil {
+		skip := true
+		for _, kind := range sink.kinds {
+			if strings.ToLower(kind) == strings.ToLower(buffer.Kind) {
+				skip = false
 			}
 		}
-		if skip{
+		if skip {
 			return true
 		}
 	}

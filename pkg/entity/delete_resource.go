@@ -5,9 +5,9 @@ import (
 )
 
 type DeleteInspection struct {
-	Kind      string
 	NameSpace string
 	Name      string
+	Kind      string
 }
 
 type DeleteInspectionBatch struct {

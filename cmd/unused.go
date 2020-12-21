@@ -1,8 +1,9 @@
 package cmd
 
 import (
-	"log"
+	"time"
 
+	"github.com/q8s-io/cluster-detector/pkg/log"
 	"github.com/q8s-io/cluster-detector/pkg/sinks"
 	"github.com/q8s-io/cluster-detector/pkg/sinks/kafka"
 
@@ -29,9 +30,17 @@ func RunUnusedInspection() {
 		}
 		kafkaSink.ExportDeleteInspection(eventResources)
 	}
-	log.Println("--------------KafKa Deleted Inspections--------------")
+	//log.Println("--------------KafKa Deleted Inspections--------------")
 	for i := range kafka.KafkaDeleteInspection {
-		log.Println(i)
+		//log.Println(i)
+		log.PrintLog(log.LogMess{
+			Namespace: i.NameSpace,
+			Name:      i.Name,
+			Kind:      i.Kind,
+			Type:      "GCC",
+			Time:      time.Now(),
+			Info:      nil,
+		})
 	}
 	klog.Info("Starting unused")
 	klog.Infof("Starting DeleteInspection")

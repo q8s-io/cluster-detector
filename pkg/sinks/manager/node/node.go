@@ -31,36 +31,6 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-func NewNodeSinkManager(sinks []entity.NodeSink, exportEventsTimeout, stopTimeout time.Duration) (entity.NodeSink, error) {
-	var sinkHolders []sinkHolder
-	for _, sink := range sinks {
-		sh := sinkHolder{
-			sink:             sink,
-			nodeBatchChannel: make(chan *entity.NodeInspectionBatch),
-			stopChannel:      make(chan bool),
-		}
-		sinkHolders = append(sinkHolders, sh)
-		go func(sh sinkHolder) {
-			for {
-				select {
-				case data := <-sh.nodeBatchChannel:
-					export(sh.sink, data)
-				case isStop := <-sh.stopChannel:
-					klog.V(2).Infof("Stop received: %s", sh.sink.Name())
-					if isStop {
-						sh.sink.Stop()
-						return
-					}
-				}
-			}
-		}(sh)
-	}
-	return &sinkManager{
-		sinkHolders:        sinkHolders,
-		exportNodesTimeout: exportEventsTimeout,
-		stopTimeout:        stopTimeout,
-	}, nil
-}
 
 // Guarantees that the export will complete in exportEventsTimeout.
 func (this *sinkManager) ExportNodeInspection(data *entity.NodeInspectionBatch) {
@@ -104,6 +74,3 @@ func (this *sinkManager) Stop() {
 	}
 }
 
-func export(s entity.NodeSink, data *entity.NodeInspectionBatch) {
-	s.ExportNodeInspection(data)
-}

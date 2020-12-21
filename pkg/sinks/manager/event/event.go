@@ -31,37 +31,6 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-/*func NewEventSinkManager(sinks []entity.EventSink, exportEventsTimeout, stopTimeout time.Duration) (entity.EventSink, error) {
-	var sinkHolders []sinkHolder
-	for _, sink := range sinks {
-		sh := sinkHolder{
-			sink:              sink,
-			eventBatchChannel: make(chan *entity.EventBatch),
-			stopChannel:       make(chan bool),
-		}
-		sinkHolders = append(sinkHolders, sh)
-		go func(sh sinkHolder) {
-			for {
-				select {
-				case data := <-sh.eventBatchChannel:
-					export(sh.sink, data)
-				case isStop := <-sh.stopChannel:
-					klog.V(2).Infof("Stop received: %s", sh.sink.Name())
-					if isStop {
-						sh.sink.Stop()
-						return
-					}
-				}
-			}
-		}(sh)
-	}
-	return &sinkManager{
-		sinkHolders:         sinkHolders,
-		exportEventsTimeout: exportEventsTimeout,
-		stopTimeout:         stopTimeout,
-	}, nil
-}*/
-
 // Guarantees that the export will complete in exportEventsTimeout.
 func (this *sinkManager) ExportEvents(data *entity.EventBatch) {
 	var wg sync.WaitGroup
@@ -104,6 +73,3 @@ func (this *sinkManager) Stop() {
 	}
 }
 
-func export(s entity.EventSink, data *chan *entity.EventInspection) {
-	s.ExportEvents(data)
-}

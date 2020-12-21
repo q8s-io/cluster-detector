@@ -1,7 +1,9 @@
 package cmd
 
 import (
-	"log"
+	"time"
+
+	"github.com/q8s-io/cluster-detector/pkg/log"
 
 	"k8s.io/klog"
 
@@ -29,9 +31,16 @@ func RunEventsWatch() {
 		}
 		kafkaSink.ExportEvents(eventResources)
 	}
-	log.Println("--------------KafKa event--------------")
 	for i := range kafka.KafkaEventInspection {
-		log.Println(i)
+		log.PrintLog(log.LogMess{
+			Namespace: i.EventNamespace,
+			Name:      i.EventResourceName,
+			Kind: 	   i.EventKind,
+			Type:      i.EventType,
+			Time:      time.Now(),
+			Info:      i.EventInfo,
+		})
+
 	}
 	klog.Info("Starting eventer")
 }

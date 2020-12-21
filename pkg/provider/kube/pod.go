@@ -73,7 +73,7 @@ func (this *PodInspectionSource) inspection() {
 				PodList <- podInspection
 			}
 		}
-		time.Sleep(time.Second*20)
+		time.Sleep(time.Second * 20)
 	}
 }
 
@@ -106,15 +106,15 @@ func (this *PodInspectionSource) filter(pod *v1.Pod) *entity.PodInspection {
 
 func NewPodInspectionSource(uri *url.URL) (*chan *entity.PodInspection, error) {
 	kubeClient, err := kubernetes.GetKubernetesClient(uri)
-	PodList = make(chan *entity.PodInspection,LocalPodsSize)
+	PodList = make(chan *entity.PodInspection, LocalPodsSize)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
 		return nil, err
 	}
 	podsClient := kubeClient.CoreV1().Pods("")
 	result := PodInspectionSource{
-		stopChannel:    make(chan struct{}),
-		podsClient:     podsClient,
+		stopChannel: make(chan struct{}),
+		podsClient:  podsClient,
 	}
 	go result.inspection()
 	return &PodList, nil

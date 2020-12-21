@@ -7,11 +7,11 @@ import (
 )
 
 type EventInspection struct {
-	EventKind         string
 	EventNamespace    string
 	EventResourceName string
+	EventKind         string
 	EventType         string
-	EventTime		  time.Time
+	EventTime         time.Time
 	EventInfo         interface{}
 	//EventUID		  string
 }
@@ -60,7 +60,7 @@ func (this EventSinkPoint) EventToPoint(event *EventInspection) (*EventSinkPoint
 		return nil, err
 	}
 	point := EventSinkPoint{
-		EventTimestamp: event.EventTime,//event.LastTimestamp.Time.UTC(),
+		EventTimestamp: event.EventTime, //event.LastTimestamp.Time.UTC(),
 		EventValue:     value,
 		/*EventTags: map[string]string{
 			"eventID": event.EventUID,

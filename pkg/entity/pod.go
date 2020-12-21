@@ -31,16 +31,19 @@ type PodSink interface {
 type Namespaces []string
 
 func (namespaces Namespaces) SkipPod(inspection *PodInspection) bool {
+	//fmt.Println(namespaces)
 	if namespaces != nil {
 		skip := true
 		for _, namespace := range namespaces {
 			if namespace == inspection.Namespace {
+			//	fmt.Println(namespace, "==", inspection.Namespace)
 				skip = false
 			}
+		}
 			if skip {
 				return true
 			}
-		}
 	}
+
 	return false
 }

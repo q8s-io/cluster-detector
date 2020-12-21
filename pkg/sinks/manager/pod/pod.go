@@ -31,36 +31,6 @@ type sinkManager struct {
 	stopTimeout time.Duration
 }
 
-/*func NewPodSinkManager(sinks []entity.PodSink, exportPodsTimeout, stopTimeout time.Duration) (entity.PodSink, error) {
-	var sinkHolders []sinkHolder
-	for _, sink := range sinks {
-		sh := sinkHolder{
-			sink:            sink,
-			podBatchChannel: make(chan *entity.PodInspectionBatch),
-			stopChannel:     make(chan bool),
-		}
-		sinkHolders = append(sinkHolders, sh)
-		go func(sh sinkHolder) {
-			for {
-				select {
-				case data := <-sh.podBatchChannel:
-					export(sh.sink, data)
-				case isStop := <-sh.stopChannel:
-					klog.V(2).Infof("Stop received: %s", sh.sink.Name())
-					if isStop {
-						sh.sink.Stop()
-						return
-					}
-				}
-			}
-		}(sh)
-	}
-	return &sinkManager{
-		sinkHolders:        sinkHolders,
-		exportNodesTimeout: exportPodsTimeout,
-		stopTimeout:        stopTimeout,
-	}, nil
-}*/
 
 // Guarantees that the export will complete in exportEventsTimeout.
 func (this *sinkManager) ExportPodInspection(data *entity.PodInspectionBatch) {

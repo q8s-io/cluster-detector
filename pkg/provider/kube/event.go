@@ -21,32 +21,30 @@ import (
 const (
 	// Number of object pointers.
 	// Big enough so it won't be hit anytime soon with reasonable GetNewEvents frequency.
-	LocalEventsBufferSize = 100000
-	DELETE = "Deleted"
-	JobEvent ="Job"
-	PodEvent ="Pod"
-	DeploymentEvent="Deployment"
-	ReplicationControllerEvent="ReplicationController"
-	NodeEvent="Node"
-	ReplicaSetEvent="ReplicaSet"
-	DaemonSetEvent="DaemonSet"
-	StatefulSetEvent="StatefulSet"
-	NameSpaceEvent        = "NameSpace"
-	ConfigMapEvent        = "ConfigMap"
-	SecretEvent           = "Secret"
-	ServiceEvent          = "Service"
-	IngressEvent          = "Ingress"
-	PersistentVolumeEvent = "PersistentVolume"
-	ServiceAccountEvent   = "ServiceAccount"
-	ClusterRoleEvent      = "ClusterRole"
+	LocalEventsBufferSize      = 100000
+	DELETE                     = "Deleted"
+	JobEvent                   = "Job"
+	PodEvent                   = "Pod"
+	DeploymentEvent            = "Deployment"
+	ReplicationControllerEvent = "ReplicationController"
+	NodeEvent                  = "Node"
+	ReplicaSetEvent            = "ReplicaSet"
+	DaemonSetEvent             = "DaemonSet"
+	StatefulSetEvent           = "StatefulSet"
+	NameSpaceEvent             = "NameSpace"
+	ConfigMapEvent             = "ConfigMap"
+	SecretEvent                = "Secret"
+	ServiceEvent               = "Service"
+	IngressEvent               = "Ingress"
+	PersistentVolumeEvent      = "PersistentVolume"
+	ServiceAccountEvent        = "ServiceAccount"
+	ClusterRoleEvent           = "ClusterRole"
 )
 
 type EventClient struct {
 	kubeClient  k8s.Interface
 	stopChannel chan struct{}
 }
-
-
 
 var EventList chan *entity.EventInspection
 
@@ -117,14 +115,14 @@ func (harvester *EventClient) normalWatch() {
 					break innerLoop
 				}
 				if event, ok := watchUpdate.Object.(*corev1.Event); ok {
-					newEvent :=&entity.EventInspection{
+					newEvent := &entity.EventInspection{
 						EventKind:         event.InvolvedObject.Kind,
 						EventNamespace:    event.InvolvedObject.Namespace,
 						EventResourceName: event.InvolvedObject.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-					//	EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//	EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -145,71 +143,93 @@ func (harvester *EventClient) normalWatch() {
 	}
 }
 
-func (harvester *EventClient) deleteWatch(){
+func (harvester *EventClient) deleteWatch() {
 	//var deleteinformer []cache.SharedIndexInformer
-	stop:=make(chan struct{})
+	stop := make(chan struct{})
 	defer close(stop)
-	factory:=informers.NewSharedInformerFactory(harvester.kubeClient,30)
-	//TODO pod
-	podInformer:=factory.Core().V1().Pods()
-	informer1:=podInformer.Informer()
-	registDeleteHandler(informer1,PodEvent)
-	//TODO job
-	jobInformer:=factory.Batch().V1().Jobs()
-	informer2:=jobInformer.Informer()
-	registDeleteHandler(informer2,JobEvent)
-	//TODO rs
-	rsInformer:=factory.Apps().V1().ReplicaSets()
-	informer3:=rsInformer.Informer()
-	registDeleteHandler(informer3,ReplicaSetEvent)
-	//TODO rc
-	rcInformer:=factory.Core().V1().ReplicationControllers()
-	informer4:=rcInformer.Informer()
-	registDeleteHandler(informer4,ReplicationControllerEvent)
-	//TODO DaemonSet
-	dsInformer:=factory.Apps().V1().DaemonSets()
-	informer5:=dsInformer.Informer()
-	registDeleteHandler(informer5,DaemonSetEvent)
-	//TODO Deployment
-	dpInformer:=factory.Apps().V1().Deployments()
-	informer6:=dpInformer.Informer()
-	registDeleteHandler(informer6,DeploymentEvent)
-	//TODO Node
-	nodeInformer:=factory.Core().V1().Nodes()
-	informer7:=nodeInformer.Informer()
-	registDeleteHandler(informer7,NodeEvent)
-	//TODO StatefulSet
-	sfInformer:=factory.Apps().V1().StatefulSets()
-	informer8:=sfInformer.Informer()
-	registDeleteHandler(informer8,StatefulSetEvent)
+	factory := informers.NewSharedInformerFactory(harvester.kubeClient, 30)
+	podInformer(factory)
+	jobInformer(factory)
+	replicaSetInformer(factory)
+	replicationControllerInformer(factory)
+	daemonSetInformer(factory)
+	deploymentInformer(factory)
+	nodeInformer(factory)
+	statefulSetInformer(factory)
 	go factory.Start(stop)
 	<-stop
 }
 
+//TODO Pod
+func podInformer(factory informers.SharedInformerFactory){
+	podInformer := factory.Core().V1().Pods().Informer()
+	registDeleteHandler(podInformer,PodEvent)
+}
 
-func registDeleteHandler(informer cache.SharedIndexInformer,resourceType string){
+//TODO Job
+func jobInformer(factory informers.SharedInformerFactory){
+	jobInformer := factory.Batch().V1().Jobs().Informer()
+	registDeleteHandler(jobInformer,JobEvent)
+}
+
+//TODO ReplicaSet
+func replicaSetInformer(factory informers.SharedInformerFactory){
+	rsInformer := factory.Apps().V1().ReplicaSets().Informer()
+	registDeleteHandler(rsInformer,ReplicaSetEvent)
+}
+
+//TODO ReplicationController
+func replicationControllerInformer(factory informers.SharedInformerFactory){
+	rcInformer := factory.Core().V1().ReplicationControllers().Informer()
+	registDeleteHandler(rcInformer,ReplicationControllerEvent)
+}
+
+//TODO DaemonSet
+func daemonSetInformer(factory informers.SharedInformerFactory){
+	dsInformer := factory.Apps().V1().DaemonSets().Informer()
+	registDeleteHandler(dsInformer,DaemonSetEvent)
+}
+
+//TODO Deployment
+func deploymentInformer(factory informers.SharedInformerFactory){
+	dpInformer := factory.Apps().V1().Deployments().Informer()
+	registDeleteHandler(dpInformer,DeploymentEvent)
+}
+
+//TODO Node
+func nodeInformer(factory informers.SharedInformerFactory){
+	nodeInformer := factory.Core().V1().Nodes().Informer()
+	registDeleteHandler(nodeInformer,NodeEvent)
+}
+
+//TODO StatefulSet
+func statefulSetInformer(factory informers.SharedInformerFactory){
+	sfInformer := factory.Apps().V1().StatefulSets().Informer()
+	registDeleteHandler(sfInformer,StatefulSetEvent)
+}
+
+func registDeleteHandler(informer cache.SharedIndexInformer, resourceType string) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
-			key,err:=cache.MetaNamespaceKeyFunc(obj)
-			if err!=nil{
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err != nil {
 				klog.Infof("can't get delete resource namespace and name\n")
 			}
-			nameSpace,name,err:=cache.SplitMetaNamespaceKey(key)
-			if err!=nil{
+			nameSpace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
 				klog.Infof("can't split delete resource namespace and name\n")
 			}
 
-			inspection:=&entity.EventInspection{
+			inspection := &entity.EventInspection{
 				EventKind:         resourceType,
 				EventNamespace:    nameSpace,
 				EventResourceName: name,
 				EventType:         DELETE,
-				EventTime:         time.Time{},
+				EventTime:         time.Now(),
 				EventInfo:         obj,
-				//EventUID:          cache.,
 			}
 			select {
-			case EventList<-inspection:
+			case EventList <- inspection:
 				//OK not full
 			default:
 				klog.Info("Event buffer full, dropping event")
@@ -217,7 +237,6 @@ func registDeleteHandler(informer cache.SharedIndexInformer,resourceType string)
 		},
 	})
 }
-
 
 func (harvester *EventClient) namespaceWatch() {
 	for {
@@ -261,8 +280,8 @@ func (harvester *EventClient) namespaceWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-					//	EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//	EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -325,8 +344,8 @@ func (harvester *EventClient) comfigMapWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-				//		EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//		EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -389,8 +408,8 @@ func (harvester *EventClient) secretEventWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-				//		EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//		EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -453,8 +472,8 @@ func (harvester *EventClient) serviceEventWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-			//			EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -517,8 +536,8 @@ func (harvester *EventClient) ingressEventWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-			//			EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -581,8 +600,8 @@ func (harvester *EventClient) persistentVolumeEventWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-			//			EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -645,8 +664,8 @@ func (harvester *EventClient) serviceAccountEvent() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-			//			EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//			EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:
@@ -709,8 +728,8 @@ func (harvester *EventClient) clusterRoleEventWatch() {
 						EventResourceName: event.Name,
 						EventType:         string(watchUpdate.Type),
 						EventInfo:         *event,
-						EventTime: time.Now(),
-				//		EventUID: string(event.UID),
+						EventTime:         time.Now(),
+						//		EventUID: string(event.UID),
 					}
 					select {
 					case EventList <- newEvent:

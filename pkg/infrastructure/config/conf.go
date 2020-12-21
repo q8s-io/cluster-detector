@@ -19,17 +19,17 @@ type Source struct {
 
 // Events config
 type EventsConfig struct {
-	Enabled            bool `toml:"enabled"`
-	KafkaEventConfig   KafkaEventConfig
+	Enabled          bool `toml:"enabled"`
+	KafkaEventConfig KafkaEventConfig
 	//WebHookEventConfig WebHookEventConfig
 }
 
 // NodeInspection config
 type NodeInspectionConfig struct {
-	Enabled           bool `toml:"enabled"`
-	Speed             int  `toml:"speed"`
-	KafkaNodeConfig   Kafka
-//	WebHookNodeConfig WebHook
+	Enabled         bool `toml:"enabled"`
+	Speed           int  `toml:"speed"`
+	KafkaNodeConfig Kafka
+	//	WebHookNodeConfig WebHook
 }
 
 type DeleteInspectionConfig struct {

@@ -81,13 +81,13 @@ func (this *NodeInspectionSource) inspection() {
 			NodeList <- inspection
 			//	this.localNodeBuffer <- inspection
 		}
-		time.Sleep(time.Second*20)
+		time.Sleep(time.Second * 20)
 	}
 }
 
-func NewNodeInspectionSource(uri *url.URL) (* chan *nodecore.NodeInspection, error) {
+func NewNodeInspectionSource(uri *url.URL) (*chan *nodecore.NodeInspection, error) {
 	kubeClient, err := kubernetes.GetKubernetesClient(uri)
-	NodeList = make(chan *nodecore.NodeInspection,LocalNodesBufferSize)
+	NodeList = make(chan *nodecore.NodeInspection, LocalNodesBufferSize)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
 		return nil, err
