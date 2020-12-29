@@ -1,12 +1,15 @@
-package kube
+package event
 
 import (
-	//"fmt"
-	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"net/url"
+	"time"
+
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/tools/cache"
 
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
+	// "fmt"
+	"github.com/q8s-io/cluster-detector/pkg/entity"
+
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	rbac "k8s.io/api/rbac/v1beta1"
@@ -14,8 +17,8 @@ import (
 	"k8s.io/apimachinery/pkg/watch"
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
-	"net/url"
-	"time"
+
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
 )
 
 const (
@@ -163,49 +166,49 @@ func (harvester *EventClient) deleteWatch() {
 //TODO Pod
 func podInformer(factory informers.SharedInformerFactory){
 	podInformer := factory.Core().V1().Pods().Informer()
-	registDeleteHandler(podInformer,PodEvent)
+	registDeleteHandler(podInformer, PodEvent)
 }
 
 //TODO Job
 func jobInformer(factory informers.SharedInformerFactory){
 	jobInformer := factory.Batch().V1().Jobs().Informer()
-	registDeleteHandler(jobInformer,JobEvent)
+	registDeleteHandler(jobInformer, JobEvent)
 }
 
 //TODO ReplicaSet
 func replicaSetInformer(factory informers.SharedInformerFactory){
 	rsInformer := factory.Apps().V1().ReplicaSets().Informer()
-	registDeleteHandler(rsInformer,ReplicaSetEvent)
+	registDeleteHandler(rsInformer, ReplicaSetEvent)
 }
 
 //TODO ReplicationController
 func replicationControllerInformer(factory informers.SharedInformerFactory){
 	rcInformer := factory.Core().V1().ReplicationControllers().Informer()
-	registDeleteHandler(rcInformer,ReplicationControllerEvent)
+	registDeleteHandler(rcInformer, ReplicationControllerEvent)
 }
 
 //TODO DaemonSet
 func daemonSetInformer(factory informers.SharedInformerFactory){
 	dsInformer := factory.Apps().V1().DaemonSets().Informer()
-	registDeleteHandler(dsInformer,DaemonSetEvent)
+	registDeleteHandler(dsInformer, DaemonSetEvent)
 }
 
 //TODO Deployment
 func deploymentInformer(factory informers.SharedInformerFactory){
 	dpInformer := factory.Apps().V1().Deployments().Informer()
-	registDeleteHandler(dpInformer,DeploymentEvent)
+	registDeleteHandler(dpInformer, DeploymentEvent)
 }
 
 //TODO Node
 func nodeInformer(factory informers.SharedInformerFactory){
 	nodeInformer := factory.Core().V1().Nodes().Informer()
-	registDeleteHandler(nodeInformer,NodeEvent)
+	registDeleteHandler(nodeInformer, NodeEvent)
 }
 
 //TODO StatefulSet
 func statefulSetInformer(factory informers.SharedInformerFactory){
 	sfInformer := factory.Apps().V1().StatefulSets().Informer()
-	registDeleteHandler(sfInformer,StatefulSetEvent)
+	registDeleteHandler(sfInformer, StatefulSetEvent)
 }
 
 func registDeleteHandler(informer cache.SharedIndexInformer, resourceType string) {

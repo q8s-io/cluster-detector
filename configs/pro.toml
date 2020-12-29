@@ -2,10 +2,10 @@
 kubernetes_url = "https://kubernetes.default"
 
 [EventsConfig]
-enabled = false
+enabled = true
 
 [EventsConfig.KafkaEventConfig]
-enabled = false
+enabled = true
 brokers = ["10.146.143.206:9092"]
 topic = "heapster-events"
 namespaces = ["default"]
@@ -32,12 +32,12 @@ brokers = ["10.146.143.206:9092"]
 topic = "heapster-nodes"
 
 [PodInspectionConfig]
-enabled = true
+enabled = false
 speed = 30
 timeout_threshold = 300
 
 [PodInspectionConfig.KafkaPodConfig]
-enabled = true
+enabled = false
 brokers = ["10.146.143.206:9092"]
 topic = "heapster-pods"
 namespaces = ["default","kube-system","lc"]

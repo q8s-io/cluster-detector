@@ -16,7 +16,8 @@ import (
 
 	deletecore "github.com/q8s-io/cluster-detector/pkg/entity"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube/determiner"
-	resource "github.com/q8s-io/cluster-detector/pkg/provider/kube/unused"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/node"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/unused"
 )
 
 const (
@@ -153,7 +154,7 @@ DeleteLoop:
 			result.Inspections = append(result.Inspections, inspection)
 			count++
 		// 防止写入信道出现崩溃，及时退出。
-		case <-time.After(time.Second * DefaultGetNodeTimeout):
+		case <-time.After(time.Second * node.DefaultGetNodeTimeout):
 			break DeleteLoop
 		}
 	}

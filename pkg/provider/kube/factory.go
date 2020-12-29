@@ -8,6 +8,9 @@ import (
 
 	"github.com/q8s-io/cluster-detector/pkg/entity"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/event"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/node"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/pod"
 )
 
 type SourceFactory struct{}
@@ -21,7 +24,7 @@ func (_ *SourceFactory) BuildEvents(source config.Source) (*chan *entity.EventIn
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
 	}
-	src, err := NewKubernetesSource(requestURI)
+	src, err := event.NewKubernetesSource(requestURI)
 	if err != nil {
 		klog.Info("Failed to create %s: %v", source, err)
 	}
@@ -49,7 +52,7 @@ func (_ *SourceFactory) BuildNodeInspection(source config.Source) (*chan *entity
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
 	}
-	src, err := NewNodeInspectionSource(requestURI)
+	src, err := node.NewNodeInspectionSource(requestURI)
 	if err != nil {
 		klog.Info("Failed to create %s: %v", source, err)
 	} /*else {
@@ -64,7 +67,7 @@ func (_ *SourceFactory) BuildPodInspection(source config.Source) (*chan *entity.
 	if parseErr != nil {
 		return nil, fmt.Errorf("Source not recognized: %s\n", parseErr)
 	}
-	src, err := NewPodInspectionSource(requestURI)
+	src, err := pod.NewPodInspectionSource(requestURI)
 	if err != nil {
 		klog.Info("Failed to create %s: %v", source, err)
 	} /*else {

@@ -23,6 +23,6 @@ type NodeInspectionSource interface {
 
 type NodeSink interface {
 	Name() string
-	ExportNodeInspection(*NodeInspectionBatch)
+	ExportNodeInspection(*chan *NodeInspection)
 	Stop()
 }

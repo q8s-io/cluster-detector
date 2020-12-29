@@ -1,4 +1,4 @@
-package kube
+package node
 
 import (
 	"net/url"
