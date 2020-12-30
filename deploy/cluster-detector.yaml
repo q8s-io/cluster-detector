@@ -10,13 +10,13 @@ roleRef:
 subjects:
   - kind: ServiceAccount
     name: cluster-detector
-    namespace: infra
+    namespace: kube-system
 ---
 apiVersion: v1
 kind: ServiceAccount
 metadata:
   name: cluster-detector
-  namespace: infra
+  namespace: kube-system
 
 ---
 apiVersion: apps/v1
@@ -25,7 +25,7 @@ metadata:
   labels:
     name: cluster-detector
   name: cluster-detector
-  namespace: infra
+  namespace: kube-system
 spec:
   replicas: 1
   selector:

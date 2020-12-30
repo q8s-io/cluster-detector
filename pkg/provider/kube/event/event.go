@@ -150,7 +150,7 @@ func (harvester *EventClient) deleteWatch() {
 	//var deleteinformer []cache.SharedIndexInformer
 	stop := make(chan struct{})
 	defer close(stop)
-	factory := informers.NewSharedInformerFactory(harvester.kubeClient, 30)
+	factory := informers.NewSharedInformerFactory(harvester.kubeClient, time.Second*30)
 	podInformer(factory)
 	jobInformer(factory)
 	replicaSetInformer(factory)

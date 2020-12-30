@@ -3,7 +3,6 @@ package kubernetes
 import (
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net/url"
 	"strconv"
 
@@ -122,14 +121,14 @@ func GetKubeClientConfig(uri *url.URL) (*restClient.Config, error) {
 }
 
 func GetKubernetesClient(uri *url.URL) (client kubernetes.Interface, err error) {
-	/*kubeConfig, err := GetKubeClientConfig(uri)
+	kubeConfig, err := GetKubeClientConfig(uri)
 	if err != nil {
 		return nil, err
-	}*/
-	kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
+	}
+	/*kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		log.Println(err.Error())
-	}
+	}*/
 
 	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
