@@ -10,6 +10,7 @@ import (
 	"k8s.io/klog"
 
 	nodecore "github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
 )
 
@@ -81,7 +82,7 @@ func (this *NodeInspectionSource) inspection() {
 			NodeList <- inspection
 			//	this.localNodeBuffer <- inspection
 		}
-		time.Sleep(time.Second * 20)
+		time.Sleep(time.Second * time.Duration(config.Config.NodeInspectionConfig.Speed))
 	}
 }
 

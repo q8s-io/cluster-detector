@@ -15,6 +15,7 @@ import (
 	cmdutil "k8s.io/kubectl/pkg/cmd/util"
 
 	deletecore "github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube/determiner"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube/node"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube/unused"
@@ -60,7 +61,7 @@ func newRunner() {
 			log.Fatalf("get deleteInspections error err:%v\n", err.Error())
 		}
 		/*fmt.Println("Unused Resource sum: ",len(UnusedResourceList))*/
-		time.Sleep(time.Second * 60)
+		time.Sleep(time.Second * time.Duration(config.Config.DeleteInspectionConfig.Speed))
 		/*return dels*/
 	}
 }

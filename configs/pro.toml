@@ -8,36 +8,36 @@ enabled = true
 enabled = true
 brokers = ["10.146.143.206:9092"]
 topic = "heapster-events"
-namespaces = ["default"]
+namespaces = ["default","lc"]
 kinds = ["Pod", "Deployment","NameSpace"]
 
 [DeleteInspectionConfig]
-enabled = false
+enabled = true
 speed = 10
 
 [DeleteInspectionConfig.KafkaDeleteConfig]
-enabled = false
+enabled = true
 brokers = ["10.146.143.206:9092"]
 topic = "heapster-deletes"
-namespaces = ["lc"]
+namespaces = ["lc","default"]
 kinds = ["Pod"]
 
 [NodeInspectionConfig]
-enabled = false
+enabled = true
 speed = 10
 
 [NodeInspectionConfig.KafkaNodeConfig]
-enabled = false
+enabled = true
 brokers = ["10.146.143.206:9092"]
 topic = "heapster-nodes"
 
 [PodInspectionConfig]
-enabled = false
+enabled = true
 speed = 30
 timeout_threshold = 300
 
 [PodInspectionConfig.KafkaPodConfig]
-enabled = false
+enabled = true
 brokers = ["10.146.143.206:9092"]
 topic = "heapster-pods"
 namespaces = ["default","kube-system","lc"]

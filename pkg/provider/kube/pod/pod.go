@@ -73,7 +73,7 @@ func (this *PodInspectionSource) inspection() {
 				PodList <- podInspection
 			}
 		}
-		time.Sleep(time.Second * 20)
+		time.Sleep(time.Second * time.Duration(config.Config.PodInspectionConfig.Speed))
 	}
 }
 

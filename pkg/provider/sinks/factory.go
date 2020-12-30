@@ -1,14 +1,19 @@
 package sinks
 
 import (
-	/*"github.com/q8s-io/cluster-detector/pkg/entity"
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
-	"github.com/q8s-io/cluster-detector/pkg/provider/sinks/kafka/deletekafka"
-	"github.com/q8s-io/cluster-detector/pkg/provider/sinks/kafka/eventkafka"
-	"github.com/q8s-io/cluster-detector/pkg/provider/sinks/kafka/podkafka"*/
+	"sync"
+
+	"github.com/q8s-io/cluster-detector/pkg/provider/sinks/kafka"
 )
 
 type SinkFactory struct {
+	sync.RWMutex
+}
+
+func (s *SinkFactory)BuildKafka(){
+	s.Lock()
+	defer s.Unlock()
+	kafka.KafkaSink()
 }
 
 /*func (_ *SinkFactory) BuildEventKafka(kafkaEventConfig *config.KafkaEventConfig) (entity.EventSink, error) {

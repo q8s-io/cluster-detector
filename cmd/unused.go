@@ -3,9 +3,8 @@ package cmd
 import (
 	"k8s.io/klog"
 
-	"github.com/q8s-io/cluster-detector/pkg/provider/filter"
-
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/provider/filter"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube"
 )
 

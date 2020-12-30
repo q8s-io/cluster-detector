@@ -47,7 +47,7 @@ func Run() {
 	if config.Config.PodInspectionConfig.Enabled == true {
 		go RunPodInspection()
 	}
-
+	go Sink()
 	go startHTTPServer()
 
 	<-quitChannel
