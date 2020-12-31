@@ -1,0 +1,76 @@
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: cluster-detector
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: cluster-admin
+subjects:
+  - kind: ServiceAccount
+    name: cluster-detector
+    namespace: infra
+---
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: cluster-detector
+  namespace: infra
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cluster-detector
+  namespace: infra
+spec:
+  replicas: 1
+  selector:
+    matchLabels: 
+      app: cluster-detector
+  template:
+    metadata:
+      labels:
+        app: cluster-detector
+    spec:
+      serviceAccount: cluster-detector
+      containers:
+      - image: uhub.service.ucloud.cn/devsecops/cluster-detector:v1
+        name: cluster-detector
+        env:
+        - name: TZ
+          value: "Asia/Shanghai"
+        volumeMounts:
+        - name: localtime
+          mountPath: /etc/localtime
+          readOnly: true
+        - name: zoneinfo
+          mountPath: /usr/share/zoneinfo
+          readOnly: true
+        - name: kube-config
+          mountPath: /root/.kube
+        - name: config
+          mountPath: /configs
+        imagePullPolicy: Always
+        resources:
+          requests:
+            cpu: 100m
+            memory: 100Mi
+          limits:
+            cpu: 500m
+            memory: 250Mi
+      volumes:
+      - name: kube-config
+        configMap:
+          name: kubeconfig
+      - name: localtime
+        hostPath:
+          path: /etc/localtime
+      - name: zoneinfo
+        hostPath:
+          path: /usr/share/zoneinfo
+      - name: config
+        configMap:
+          name: cluster-detector
+ 

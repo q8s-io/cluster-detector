@@ -1,31 +1,21 @@
-# build builder
 FROM golang:1.12-alpine as builder
 
-ARG CODEPATH
-
-RUN sed -i 's/dl-cdn.alpinelinux.org/mirrors.ustc.edu.cn/g' /etc/apk/repositories \
-	&& apk update \
-	&& apk add git \
-	&& rm -rf /var/cache/apk/*
-
-WORKDIR $GOPATH/src/$CODEPATH
-
+WORKDIR /build
 
 COPY . .
 
-RUN GO111MODULE=on CGO_ENABLED=0 GOOS=linux GOPROXY=https://goproxy.cn go build -o /kube-watcher detector.go
+RUN GO111MODULE=on GOOS=linux GOARCH=amd64 CGO_ENABLED=0 GOPROXY=https://goproxy.cn  go build -o app .
 
-# build server
-FROM alpine:3.8
+FROM uhub.service.ucloud.cn/infra/base-centos7:v1
 
 RUN ln -sf /usr/share/zoneinfo/Asia/Shanghai /etc/localtime
 
 WORKDIR /
 
-COPY --from=builder /kube-watcher .
+COPY --from=builder /build/app .
+
 COPY ./configs/ ./configs/
-RUN chmod +x /kube-watcher
 
-ENTRYPOINT ["/kube-watcher"]
-CMD ["-conf", "/configs/pro.toml"]
+ENTRYPOINT ["/app"]
 
+CMD [ "-conf","/configs/pro.toml" ]

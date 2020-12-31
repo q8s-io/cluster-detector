@@ -13,7 +13,7 @@ kinds = ["Pod", "Deployment","NameSpace"]
 
 [DeleteInspectionConfig]
 enabled = true
-speed = 10
+speed = 60
 
 [DeleteInspectionConfig.KafkaDeleteConfig]
 enabled = true
@@ -24,7 +24,7 @@ kinds = ["Pod"]
 
 [NodeInspectionConfig]
 enabled = true
-speed = 10
+speed = 60
 
 [NodeInspectionConfig.KafkaNodeConfig]
 enabled = true
@@ -33,7 +33,7 @@ topic = "heapster-nodes"
 
 [PodInspectionConfig]
 enabled = true
-speed = 30
+speed = 60
 timeout_threshold = 300
 
 [PodInspectionConfig.KafkaPodConfig]
