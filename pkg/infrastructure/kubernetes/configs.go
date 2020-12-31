@@ -125,7 +125,7 @@ func GetKubernetesClient(uri *url.URL) (client kubernetes.Interface, err error) 
 	if err != nil {
 		return nil, err
 	}
-	/*kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
+/*	kubeConfig, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
 	if err != nil {
 		log.Println(err.Error())
 	}*/
