@@ -17,8 +17,8 @@ func RunEventsWatch() {
 	if err != nil {
 		klog.Info("Failed to create sources: %v", err)
 	}
-	if argKafkaSink.Enabled == true{
-		eventFilter:=filter.NewFilterFactory()
-		eventFilter.KafkaFilter(eventResources,&config.Config)
+	if argKafkaSink.Enabled == true {
+		eventFilter := filter.NewFilterFactory()
+		eventFilter.KafkaFilter(eventResources, &config.Config)
 	}
 }

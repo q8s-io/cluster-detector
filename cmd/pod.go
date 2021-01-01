@@ -19,9 +19,9 @@ func RunPodInspection() {
 	if buildErr != nil {
 		klog.Fatalf("Failed to create sources: %v", buildErr)
 	}
-	if argKafkaSink.Enabled==true{
-		podFilter:=filter.NewFilterFactory()
-		podFilter.KafkaFilter(podResources,&config.Config)
+	if argKafkaSink.Enabled == true {
+		podFilter := filter.NewFilterFactory()
+		podFilter.KafkaFilter(podResources, &config.Config)
 	}
 	klog.Infof("Starting nodeInspection")
 }

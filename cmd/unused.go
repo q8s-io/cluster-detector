@@ -17,9 +17,9 @@ func RunUnusedInspection() {
 	if err != nil {
 		klog.Info("Failed to create sources: %v", err)
 	}
-	if argKafkaSink.Enabled==true{
-		deleteFilter:=filter.NewFilterFactory()
-		deleteFilter.KafkaFilter(deleteResources,&config.Config)
+	if argKafkaSink.Enabled == true {
+		deleteFilter := filter.NewFilterFactory()
+		deleteFilter.KafkaFilter(deleteResources, &config.Config)
 	}
 	//klog.Info("Starting unused")
 	klog.Infof("Starting DeleteInspection")

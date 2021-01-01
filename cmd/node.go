@@ -19,9 +19,9 @@ func RunNodeInspection() {
 	if buildErr != nil {
 		klog.Fatalf("Failed to create sources: %v", buildErr)
 	}
-	if argKafkaSink.Enabled==true{
-		nodeFilter:=filter.NewFilterFactory()
-		nodeFilter.KafkaFilter(nodeResources,&config.Config)
+	if argKafkaSink.Enabled == true {
+		nodeFilter := filter.NewFilterFactory()
+		nodeFilter.KafkaFilter(nodeResources, &config.Config)
 	}
 	klog.Infof("Starting nodeInspection")
 }

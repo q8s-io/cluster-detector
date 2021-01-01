@@ -36,13 +36,13 @@ func (namespaces Namespaces) SkipPod(inspection *PodInspection) bool {
 		skip := true
 		for _, namespace := range namespaces {
 			if namespace == inspection.Namespace {
-			//	fmt.Println(namespace, "==", inspection.Namespace)
+				//	fmt.Println(namespace, "==", inspection.Namespace)
 				skip = false
 			}
 		}
-			if skip {
-				return true
-			}
+		if skip {
+			return true
+		}
 	}
 
 	return false

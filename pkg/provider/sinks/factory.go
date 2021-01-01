@@ -10,7 +10,7 @@ type SinkFactory struct {
 	sync.RWMutex
 }
 
-func (s *SinkFactory)BuildKafka(){
+func (s *SinkFactory) BuildKafka() {
 	s.Lock()
 	defer s.Unlock()
 	kafka.KafkaSink()

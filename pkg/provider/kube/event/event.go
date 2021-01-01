@@ -164,49 +164,49 @@ func (harvester *EventClient) deleteWatch() {
 }
 
 //TODO Pod
-func podInformer(factory informers.SharedInformerFactory){
+func podInformer(factory informers.SharedInformerFactory) {
 	podInformer := factory.Core().V1().Pods().Informer()
 	registDeleteHandler(podInformer, PodEvent)
 }
 
 //TODO Job
-func jobInformer(factory informers.SharedInformerFactory){
+func jobInformer(factory informers.SharedInformerFactory) {
 	jobInformer := factory.Batch().V1().Jobs().Informer()
 	registDeleteHandler(jobInformer, JobEvent)
 }
 
 //TODO ReplicaSet
-func replicaSetInformer(factory informers.SharedInformerFactory){
+func replicaSetInformer(factory informers.SharedInformerFactory) {
 	rsInformer := factory.Apps().V1().ReplicaSets().Informer()
 	registDeleteHandler(rsInformer, ReplicaSetEvent)
 }
 
 //TODO ReplicationController
-func replicationControllerInformer(factory informers.SharedInformerFactory){
+func replicationControllerInformer(factory informers.SharedInformerFactory) {
 	rcInformer := factory.Core().V1().ReplicationControllers().Informer()
 	registDeleteHandler(rcInformer, ReplicationControllerEvent)
 }
 
 //TODO DaemonSet
-func daemonSetInformer(factory informers.SharedInformerFactory){
+func daemonSetInformer(factory informers.SharedInformerFactory) {
 	dsInformer := factory.Apps().V1().DaemonSets().Informer()
 	registDeleteHandler(dsInformer, DaemonSetEvent)
 }
 
 //TODO Deployment
-func deploymentInformer(factory informers.SharedInformerFactory){
+func deploymentInformer(factory informers.SharedInformerFactory) {
 	dpInformer := factory.Apps().V1().Deployments().Informer()
 	registDeleteHandler(dpInformer, DeploymentEvent)
 }
 
 //TODO Node
-func nodeInformer(factory informers.SharedInformerFactory){
+func nodeInformer(factory informers.SharedInformerFactory) {
 	nodeInformer := factory.Core().V1().Nodes().Informer()
 	registDeleteHandler(nodeInformer, NodeEvent)
 }
 
 //TODO StatefulSet
-func statefulSetInformer(factory informers.SharedInformerFactory){
+func statefulSetInformer(factory informers.SharedInformerFactory) {
 	sfInformer := factory.Apps().V1().StatefulSets().Informer()
 	registDeleteHandler(sfInformer, StatefulSetEvent)
 }
