@@ -1,19 +1,15 @@
 package config
 
 import (
-	"log"
-
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/qlog"
-
 	"github.com/BurntSushi/toml"
+	"k8s.io/klog"
 )
 
-func Init(confPath string) {
+func Load(confPath string) error {
 	// init runtime
 	if _, err := toml.DecodeFile(confPath, &Config); err != nil {
-		log.Println(err)
-		return
+		klog.Error(err)
+		return err
 	}
-	// init log
-	qlog.InitLog()
+	return nil
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-type LogMess struct {
+type Mess struct {
 	Namespace string
 	Name      string
 	Kind      string
@@ -17,7 +17,7 @@ type LogMess struct {
 	Info      interface{}
 }
 
-func PrintLog(obj LogMess) {
+func PrintLog(obj Mess) {
 	mes, err := json.Marshal(obj)
 	if err != nil {
 		logrus.Infof("marshal json error: %v\n", err.Error())

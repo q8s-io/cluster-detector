@@ -5,13 +5,13 @@ import (
 	"github.com/q8s-io/cluster-detector/pkg/provider/filter/kafka"
 )
 
-type FilterFactory struct {
+type Factory struct {
 }
 
-func NewFilterFactory() *FilterFactory {
-	return &FilterFactory{}
+func NewFilterFactory() *Factory {
+	return &Factory{}
 }
 
-func (_ FilterFactory) KafkaFilter(source interface{}, runtime *config.Runtime) {
+func (_ Factory) KafkaFilter(source interface{}, runtime *config.Runtime) {
 	kafka.Filter(source, runtime)
 }

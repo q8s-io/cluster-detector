@@ -1,7 +1,6 @@
 package event
 
 import (
-	"net/url"
 	"time"
 
 	"k8s.io/client-go/informers"
@@ -9,6 +8,7 @@ import (
 
 	// "fmt"
 	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
 
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
@@ -18,13 +18,13 @@ import (
 	k8s "k8s.io/client-go/kubernetes"
 	"k8s.io/klog"
 
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 )
 
 const (
 	// Number of object pointers.
 	// Big enough so it won't be hit anytime soon with reasonable GetNewEvents frequency.
-	LocalEventsBufferSize      = 100000
+	LocalEventsBufferSize      = 1000 * 100
 	DELETE                     = "Deleted"
 	JobEvent                   = "Job"
 	PodEvent                   = "Pod"
@@ -44,54 +44,68 @@ const (
 	ClusterRoleEvent           = "ClusterRole"
 )
 
-type EventClient struct {
-	kubeClient  k8s.Interface
-	stopChannel chan struct{}
+type Client struct {
+	KubeClient  k8s.Interface
+	StopChannel chan struct{}
 }
 
-var EventList chan *entity.EventInspection
+var List chan *entity.EventInspection
 
-func NewKubernetesSource(uri *url.URL) (*chan *entity.EventInspection, error) {
-	EventList = make(chan *entity.EventInspection, LocalEventsBufferSize)
+func NewKubernetesSource() *chan *entity.EventInspection {
+	List = make(chan *entity.EventInspection, LocalEventsBufferSize)
+	return &List
+}
 
-	kubeClient, err := kubernetes.GetKubernetesClient(uri)
+func GetKubeClient() (*Client, error) {
+
+	cfgUrl := config.Config.Source.KubernetesURL
+
+	kubeConfig, err := kubernetes.GetKubeClientConfig(cfgUrl)
 	if err != nil {
-		klog.Infof("Failed to create kubernetes client,because of %v", err)
 		return nil, err
 	}
-	eventClient := EventClient{
-		kubeClient:  kubeClient,
-		stopChannel: make(chan struct{}),
+
+	kubeClient, err := kubernetes.GetKubernetesClient(kubeConfig)
+	if err != nil {
+		klog.Error("Failed to create kubernetes client,because of %v", err)
+		return nil, err
 	}
-	go eventClient.watch()
-	return &EventList, nil
+	return &Client{
+		KubeClient:  kubeClient,
+		StopChannel: make(chan struct{}),
+	}, nil
 }
 
-func (harvester *EventClient) watch() {
+func StartWatch() {
+	var c *Client
+	var err error
+	if c, err = GetKubeClient(); err != nil {
+		return
+	}
 	// Outer loop, for reconnections
-	go harvester.normalWatch()
-	go harvester.deleteWatch()
-	go harvester.namespaceWatch()
-	go harvester.comfigMapWatch()
-	go harvester.secretEventWatch()
-	go harvester.serviceEventWatch()
-	go harvester.ingressEventWatch()
-	go harvester.persistentVolumeEventWatch()
-	go harvester.serviceAccountEvent()
-	go harvester.clusterRoleEventWatch()
+	go c.normalWatch()
+	go c.deleteWatch()
+	go c.namespaceWatch()
+	go c.comfigMapWatch()
+	go c.secretEventWatch()
+	go c.serviceEventWatch()
+	go c.ingressEventWatch()
+	go c.persistentVolumeEventWatch()
+	go c.serviceAccountEvent()
+	go c.clusterRoleEventWatch()
 	select {}
 }
 
-func (harvester *EventClient) normalWatch() {
+func (c *Client) normalWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().Events(corev1.NamespaceAll).List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().Events(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Infof("Failed to load events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().Events(corev1.NamespaceAll).Watch(
+		watcher, err := c.KubeClient.CoreV1().Events(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -128,7 +142,7 @@ func (harvester *EventClient) normalWatch() {
 						//	EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -137,7 +151,7 @@ func (harvester *EventClient) normalWatch() {
 				} else {
 					klog.Infof("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Info("Event watching stopped")
 				return
@@ -146,11 +160,11 @@ func (harvester *EventClient) normalWatch() {
 	}
 }
 
-func (harvester *EventClient) deleteWatch() {
+func (c *Client) deleteWatch() {
 	//var deleteinformer []cache.SharedIndexInformer
 	stop := make(chan struct{})
 	defer close(stop)
-	factory := informers.NewSharedInformerFactory(harvester.kubeClient, time.Second*30)
+	factory := informers.NewSharedInformerFactory(c.KubeClient, time.Second*30)
 	podInformer(factory)
 	jobInformer(factory)
 	replicaSetInformer(factory)
@@ -166,52 +180,52 @@ func (harvester *EventClient) deleteWatch() {
 //TODO Pod
 func podInformer(factory informers.SharedInformerFactory) {
 	podInformer := factory.Core().V1().Pods().Informer()
-	registDeleteHandler(podInformer, PodEvent)
+	registerDeleteHandler(podInformer, PodEvent)
 }
 
 //TODO Job
 func jobInformer(factory informers.SharedInformerFactory) {
 	jobInformer := factory.Batch().V1().Jobs().Informer()
-	registDeleteHandler(jobInformer, JobEvent)
+	registerDeleteHandler(jobInformer, JobEvent)
 }
 
 //TODO ReplicaSet
 func replicaSetInformer(factory informers.SharedInformerFactory) {
 	rsInformer := factory.Apps().V1().ReplicaSets().Informer()
-	registDeleteHandler(rsInformer, ReplicaSetEvent)
+	registerDeleteHandler(rsInformer, ReplicaSetEvent)
 }
 
 //TODO ReplicationController
 func replicationControllerInformer(factory informers.SharedInformerFactory) {
 	rcInformer := factory.Core().V1().ReplicationControllers().Informer()
-	registDeleteHandler(rcInformer, ReplicationControllerEvent)
+	registerDeleteHandler(rcInformer, ReplicationControllerEvent)
 }
 
 //TODO DaemonSet
 func daemonSetInformer(factory informers.SharedInformerFactory) {
 	dsInformer := factory.Apps().V1().DaemonSets().Informer()
-	registDeleteHandler(dsInformer, DaemonSetEvent)
+	registerDeleteHandler(dsInformer, DaemonSetEvent)
 }
 
 //TODO Deployment
 func deploymentInformer(factory informers.SharedInformerFactory) {
 	dpInformer := factory.Apps().V1().Deployments().Informer()
-	registDeleteHandler(dpInformer, DeploymentEvent)
+	registerDeleteHandler(dpInformer, DeploymentEvent)
 }
 
 //TODO Node
 func nodeInformer(factory informers.SharedInformerFactory) {
 	nodeInformer := factory.Core().V1().Nodes().Informer()
-	registDeleteHandler(nodeInformer, NodeEvent)
+	registerDeleteHandler(nodeInformer, NodeEvent)
 }
 
 //TODO StatefulSet
 func statefulSetInformer(factory informers.SharedInformerFactory) {
 	sfInformer := factory.Apps().V1().StatefulSets().Informer()
-	registDeleteHandler(sfInformer, StatefulSetEvent)
+	registerDeleteHandler(sfInformer, StatefulSetEvent)
 }
 
-func registDeleteHandler(informer cache.SharedIndexInformer, resourceType string) {
+func registerDeleteHandler(informer cache.SharedIndexInformer, resourceType string) {
 	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
 		DeleteFunc: func(obj interface{}) {
 			key, err := cache.MetaNamespaceKeyFunc(obj)
@@ -232,7 +246,7 @@ func registDeleteHandler(informer cache.SharedIndexInformer, resourceType string
 				EventInfo:         obj,
 			}
 			select {
-			case EventList <- inspection:
+			case List <- inspection:
 				//OK not full
 			default:
 				klog.Info("Event buffer full, dropping event")
@@ -241,16 +255,16 @@ func registDeleteHandler(informer cache.SharedIndexInformer, resourceType string
 	})
 }
 
-func (harvester *EventClient) namespaceWatch() {
+func (c *Client) namespaceWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
 			klog.Infof("Failed to load NameSpace events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().Namespaces().Watch(
+		watcher, err := c.KubeClient.CoreV1().Namespaces().Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -287,7 +301,7 @@ func (harvester *EventClient) namespaceWatch() {
 						//	EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -296,7 +310,7 @@ func (harvester *EventClient) namespaceWatch() {
 				} else {
 					klog.Infof("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Info("Event watching stopped")
 				return
@@ -305,16 +319,16 @@ func (harvester *EventClient) namespaceWatch() {
 	}
 }
 
-func (harvester *EventClient) comfigMapWatch() {
+func (c *Client) comfigMapWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Infof("Failed to load ComfigMap events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).Watch(
+		watcher, err := c.KubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -351,7 +365,7 @@ func (harvester *EventClient) comfigMapWatch() {
 						//		EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -360,7 +374,7 @@ func (harvester *EventClient) comfigMapWatch() {
 				} else {
 					klog.Infof("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return
@@ -369,16 +383,16 @@ func (harvester *EventClient) comfigMapWatch() {
 	}
 }
 
-func (harvester *EventClient) secretEventWatch() {
+func (c *Client) secretEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().Secrets(corev1.NamespaceAll).List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().Secrets(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load Secret events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().Secrets(corev1.NamespaceAll).Watch(
+		watcher, err := c.KubeClient.CoreV1().Secrets(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -415,7 +429,7 @@ func (harvester *EventClient) secretEventWatch() {
 						//		EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -424,7 +438,7 @@ func (harvester *EventClient) secretEventWatch() {
 				} else {
 					klog.Errorf("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return
@@ -433,16 +447,16 @@ func (harvester *EventClient) secretEventWatch() {
 	}
 }
 
-func (harvester *EventClient) serviceEventWatch() {
+func (c *Client) serviceEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().Services(corev1.NamespaceAll).List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().Services(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load Service events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().Services(corev1.NamespaceAll).Watch(
+		watcher, err := c.KubeClient.CoreV1().Services(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -479,7 +493,7 @@ func (harvester *EventClient) serviceEventWatch() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -488,7 +502,7 @@ func (harvester *EventClient) serviceEventWatch() {
 				} else {
 					klog.Errorf("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return
@@ -497,16 +511,16 @@ func (harvester *EventClient) serviceEventWatch() {
 	}
 }
 
-func (harvester *EventClient) ingressEventWatch() {
+func (c *Client) ingressEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).List(metav1.ListOptions{})
+		events, err := c.KubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load Ingress events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).Watch(
+		watcher, err := c.KubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -543,7 +557,7 @@ func (harvester *EventClient) ingressEventWatch() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -552,7 +566,7 @@ func (harvester *EventClient) ingressEventWatch() {
 				} else {
 					klog.Errorf("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return
@@ -561,16 +575,16 @@ func (harvester *EventClient) ingressEventWatch() {
 	}
 }
 
-func (harvester *EventClient) persistentVolumeEventWatch() {
+func (c *Client) persistentVolumeEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load PersistentVolume events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().PersistentVolumes().Watch(
+		watcher, err := c.KubeClient.CoreV1().PersistentVolumes().Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -607,7 +621,7 @@ func (harvester *EventClient) persistentVolumeEventWatch() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -616,7 +630,7 @@ func (harvester *EventClient) persistentVolumeEventWatch() {
 				} else {
 					klog.Errorf("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return
@@ -625,16 +639,16 @@ func (harvester *EventClient) persistentVolumeEventWatch() {
 	}
 }
 
-func (harvester *EventClient) serviceAccountEvent() {
+func (c *Client) serviceAccountEvent() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).List(metav1.ListOptions{})
+		events, err := c.KubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load ServiceAccount events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).Watch(
+		watcher, err := c.KubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -671,7 +685,7 @@ func (harvester *EventClient) serviceAccountEvent() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -680,7 +694,7 @@ func (harvester *EventClient) serviceAccountEvent() {
 				} else {
 					klog.Errorf("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return
@@ -689,16 +703,16 @@ func (harvester *EventClient) serviceAccountEvent() {
 	}
 }
 
-func (harvester *EventClient) clusterRoleEventWatch() {
+func (c *Client) clusterRoleEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := harvester.kubeClient.RbacV1beta1().ClusterRoles().List(metav1.ListOptions{})
+		events, err := c.KubeClient.RbacV1beta1().ClusterRoles().List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load ClusterRole events: %v", err)
 			continue
 		}
 		resourceVersion := events.ResourceVersion
-		watcher, err := harvester.kubeClient.RbacV1beta1().ClusterRoles().Watch(
+		watcher, err := c.KubeClient.RbacV1beta1().ClusterRoles().Watch(
 			metav1.ListOptions{
 				Watch:           true,
 				ResourceVersion: resourceVersion})
@@ -735,7 +749,7 @@ func (harvester *EventClient) clusterRoleEventWatch() {
 						//		EventUID: string(event.UID),
 					}
 					select {
-					case EventList <- newEvent:
+					case List <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -744,7 +758,7 @@ func (harvester *EventClient) clusterRoleEventWatch() {
 				} else {
 					klog.Errorf("Wrong object received: %v", watchUpdate)
 				}
-			case <-harvester.stopChannel:
+			case <-c.StopChannel:
 				watcher.Stop()
 				klog.Infof("Event watching stopped")
 				return

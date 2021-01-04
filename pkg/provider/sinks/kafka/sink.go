@@ -4,7 +4,7 @@ import (
 	filter "github.com/q8s-io/cluster-detector/pkg/provider/filter/kafka"
 )
 
-func KafkaSink() {
+func Sink() {
 	defer close(filter.FilterKafka)
 	for {
 		select {

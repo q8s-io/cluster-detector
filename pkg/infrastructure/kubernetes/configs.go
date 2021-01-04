@@ -2,16 +2,18 @@ package kubernetes
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/url"
 	"strconv"
 
-	"k8s.io/apimachinery/pkg/runtime/schema"
-	dynamicClient "k8s.io/client-go/dynamic"
+	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
-	restClient "k8s.io/client-go/rest"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
-	clientcmdAPI "k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/client-go/tools/clientcmd/api"
+	"k8s.io/klog"
+
+	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/entity/dto"
 )
 
 const (
@@ -24,7 +26,7 @@ const (
 
 func getConfigOverrides(uri *url.URL) (*clientcmd.ConfigOverrides, error) {
 	kubeConfigOverride := clientcmd.ConfigOverrides{
-		ClusterInfo: clientcmdAPI.Cluster{},
+		ClusterInfo: api.Cluster{},
 	}
 	if len(uri.Scheme) != 0 && len(uri.Host) != 0 {
 		kubeConfigOverride.ClusterInfo.Server = fmt.Sprintf("%s://%s", uri.Scheme, uri.Host)
@@ -33,6 +35,7 @@ func getConfigOverrides(uri *url.URL) (*clientcmd.ConfigOverrides, error) {
 	if len(opts["insecure"]) > 0 {
 		insecure, err := strconv.ParseBool(opts["insecure"][0])
 		if err != nil {
+			klog.Error(err)
 			return nil, err
 		}
 		kubeConfigOverride.ClusterInfo.InsecureSkipTLSVerify = insecure
@@ -40,104 +43,104 @@ func getConfigOverrides(uri *url.URL) (*clientcmd.ConfigOverrides, error) {
 	return &kubeConfigOverride, nil
 }
 
-func GetKubeClientConfig(uri *url.URL) (*restClient.Config, error) {
-	var (
-		kubeConfig *restClient.Config
-		err        error
-	)
-	opts := uri.Query()
-	configOverrides, err := getConfigOverrides(uri)
-	if err != nil {
-		return nil, err
+func GetInfoFromUrl(uri string) (*entity.UrlInfo, error) {
+	// init default value
+	var urlInfo = entity.UrlInfo{
+		InClusterConfig:   defaultInClusterConfig,
+		Insecure:          false,
+		UseServiceAccount: defaultUseServiceAccount,
+		Server:            "",
 	}
-	inClusterConfig := defaultInClusterConfig
+	requestURI, parseErr := url.ParseRequestURI(uri)
+	if parseErr != nil {
+		klog.Error(parseErr)
+		return nil, parseErr
+	}
+	// kubeConfigOverride := clientcmd.ConfigOverrides{
+	// 	ClusterInfo: api.Cluster{},
+	// }
+	if len(requestURI.Scheme) != 0 && len(requestURI.Host) != 0 {
+		urlInfo.Server = fmt.Sprintf("%s://%s", requestURI.Scheme, requestURI.Host)
+	}
+	opts := requestURI.Query()
+
 	if len(opts["inClusterConfig"]) > 0 {
-		inClusterConfig, err = strconv.ParseBool(opts["inClusterConfig"][0])
+		inClusterConfig, err := strconv.ParseBool(opts["inClusterConfig"][0])
 		if err != nil {
+			klog.Error(err)
 			return nil, err
 		}
+		urlInfo.InClusterConfig = inClusterConfig
 	}
-	if inClusterConfig {
-		kubeConfig, err = restClient.InClusterConfig()
+
+	if len(opts["insecure"]) > 0 {
+		insecure, err := strconv.ParseBool(opts["insecure"][0])
 		if err != nil {
+			klog.Error(err)
 			return nil, err
 		}
-		if configOverrides.ClusterInfo.Server != "" {
-			kubeConfig.Host = configOverrides.ClusterInfo.Server
+		// kubeConfigOverride.ClusterInfo.InsecureSkipTLSVerify = insecure
+		urlInfo.Insecure = insecure
+	}
+
+	if len(opts["useServiceAccount"]) >= 1 {
+		useServiceAccount, err := strconv.ParseBool(opts["useServiceAccount"][0])
+		if err != nil {
+			klog.Error(err)
+			return nil, err
 		}
-		kubeConfig.GroupVersion = &schema.GroupVersion{Version: APIVersion}
-		kubeConfig.Insecure = configOverrides.ClusterInfo.InsecureSkipTLSVerify
-		if configOverrides.ClusterInfo.InsecureSkipTLSVerify {
-			kubeConfig.TLSClientConfig.CAFile = ""
-		}
-	} else {
+		urlInfo.UseServiceAccount = useServiceAccount
+	}
+
+	if !urlInfo.InClusterConfig {
 		authFile := ""
 		if len(opts["auth"]) > 0 {
 			authFile = opts["auth"][0]
 		}
-		if authFile != "" {
-			// Load structured kubeconfig data from the given path.
-			loader := &clientcmd.ClientConfigLoadingRules{ExplicitPath: authFile}
-			loadedConfig, err := loader.Load()
-			if err != nil {
-				return nil, err
-			}
-			// Flatten the loaded data to a particular restclient.Config based on the current context.
-			if kubeConfig, err = clientcmd.NewNonInteractiveClientConfig(
-				*loadedConfig,
-				loadedConfig.CurrentContext,
-				&clientcmd.ConfigOverrides{},
-				loader).ClientConfig(); err != nil {
-				return nil, err
-			}
-		} else {
-			kubeConfig = &restClient.Config{
-				Host: configOverrides.ClusterInfo.Server,
-				TLSClientConfig: restClient.TLSClientConfig{
-					Insecure: configOverrides.ClusterInfo.InsecureSkipTLSVerify,
-				},
-			}
-			kubeConfig.GroupVersion = &schema.GroupVersion{Version: APIVersion}
-		}
+		urlInfo.AuthFile = authFile
 	}
-	if len(kubeConfig.Host) == 0 {
-		return nil, fmt.Errorf("invalid kubernetes master url specified")
-	}
-	useServiceAccount := defaultUseServiceAccount
-	if len(opts["useServiceAccount"]) >= 1 {
-		useServiceAccount, err = strconv.ParseBool(opts["useServiceAccount"][0])
-		if err != nil {
-			return nil, err
-		}
-	}
-	if useServiceAccount {
-		// If a readable service account token exists, then use it
-		if contents, err := ioutil.ReadFile(defaultServiceAccountFile); err == nil {
-			kubeConfig.BearerToken = string(contents)
-		}
-	}
-	kubeConfig.ContentType = "application/vnd.kubernetes.protobuf"
-	return kubeConfig, nil
+
+	return &urlInfo, nil
+
 }
 
-func GetKubernetesClient(uri *url.URL) (client kubernetes.Interface, err error) {
-	kubeConfig, err := GetKubeClientConfig(uri)
+func GetKubeClientConfig(uri string) (*rest.Config, error) {
+	urlInfo, err := GetInfoFromUrl(uri)
 	if err != nil {
 		return nil, err
 	}
+
+	return dto.ConvertKubeCfg(urlInfo)
+}
+
+// func GetKubernetesClient(uri *url.URL) (client kubernetes.Interface, err error) {
+// 	kubeConfig, err := GetKubeClientConfig(uri)
+// 	if err != nil {
+// 		return nil, err
+// 	}
+// 	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
+// 	if err != nil {
+// 		klog.Error(err)
+// 		return nil, err
+// 	}
+// 	return kubeClient, nil
+// }
+
+func GetKubernetesClient(kubeConfig *rest.Config) (kubernetes.Interface, error) {
 	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
 	if err != nil {
+		klog.Error(err)
 		return nil, err
 	}
 	return kubeClient, nil
 }
 
-func GetKubernetesDynamicClient(uri *url.URL) (client dynamicClient.Interface, err error) {
+func GetKubernetesDynamicClient(uri string) (client dynamic.Interface, err error) {
 	kubeConfig, err := GetKubeClientConfig(uri)
 	if err != nil {
 		return nil, err
 	}
-	kubeClient, err := dynamicClient.NewForConfig(kubeConfig)
+	kubeClient, err := dynamic.NewForConfig(kubeConfig)
 	if err != nil {
 		return nil, err
 	}

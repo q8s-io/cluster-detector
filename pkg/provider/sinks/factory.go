@@ -13,7 +13,7 @@ type SinkFactory struct {
 func (s *SinkFactory) BuildKafka() {
 	s.Lock()
 	defer s.Unlock()
-	kafka.KafkaSink()
+	kafka.Sink()
 }
 
 /*func (_ *SinkFactory) BuildEventKafka(kafkaEventConfig *config.KafkaEventConfig) (entity.EventSink, error) {
