@@ -1,4 +1,4 @@
-package controller
+package provider
 
 import (
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"

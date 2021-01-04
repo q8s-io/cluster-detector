@@ -12,6 +12,6 @@ func NewFilterFactory() *Factory {
 	return &Factory{}
 }
 
-func (_ Factory) KafkaFilter(source interface{}, runtime *config.Runtime) {
-	kafka.Filter(source, runtime)
+func (_ Factory) KafkaFilter(sourceType interface{}, runtime *config.Runtime) {
+	kafka.Filter(sourceType, runtime)
 }

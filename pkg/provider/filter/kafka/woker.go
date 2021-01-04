@@ -49,7 +49,7 @@ func Filter(source interface{}, kafkaConfig *config.Runtime) {
 		f := podsCh(*filter)
 		f.podKafkaFilter(&kafkaConfig.PodInspectionConfig.KafkaPodConfig)
 	case *chan *entity.DeleteInspection:
-		f := deletesCh((*filter))
+		f := deletesCh(*filter)
 		f.deleteKafkaFilter(&kafkaConfig.DeleteInspectionConfig.KafkaDeleteConfig)
 	case *chan *entity.NodeInspection:
 		f := nodesCh(*filter)

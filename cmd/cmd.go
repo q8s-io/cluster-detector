@@ -6,13 +6,14 @@ import (
 
 	"k8s.io/klog"
 
-	"github.com/q8s-io/cluster-detector/pkg/controller"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/basicPrepare"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/provider"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/event"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/node"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/pod"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release"
+	"github.com/q8s-io/cluster-detector/pkg/provider/filter/kafka"
 )
 
 var (
@@ -38,7 +39,7 @@ func runApps() {
 	quitChannel := make(chan struct{}, 0)
 	defer close(quitChannel)
 
-	controller.RunKafka()
+	kafka.RunKafka()
 	// Start watch resource of cluster
 	if cfg.EventsConfig.Enabled == true {
 		go event.StartWatch()
@@ -52,7 +53,7 @@ func runApps() {
 	if cfg.PodInspectionConfig.Enabled == true {
 		go pod.StartWatch()
 	}
-	go controller.Sink()
-	go controller.StartHTTPServer(*argHealthyIP, *argHealthyPort)
+	go provider.Sink()
+	go provider.StartHTTPServer(*argHealthyIP, *argHealthyPort)
 	<-quitChannel
 }
