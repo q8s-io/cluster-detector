@@ -1,18 +1,14 @@
 package pod
 
 import (
-	"time"
+	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
 	v1 "k8s.io/api/core/v1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubev1core "k8s.io/client-go/kubernetes/typed/core/v1"
 	"k8s.io/klog"
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
-	"github.com/q8s-io/cluster-detector/pkg/entity"
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
-)
-
-const (
-	LocalPodsSize        = 10000
+	"time"
 )
 
 var timeoutThreshold = config.Config.PodInspectionConfig.TimeoutThreshold
@@ -23,9 +19,10 @@ type PodInspectionSource struct {
 	podsClient  kubev1core.PodInterface
 }
 
- var PodList chan *entity.PodInspection
+var PodList chan *entity.PodInspection
+
 func NewKubernetesSource() *chan *entity.PodInspection {
-	PodList = make(chan *entity.PodInspection, LocalPodsSize)
+	PodList = make(chan *entity.PodInspection, entity.DefaultBufSize)
 	return &PodList
 }
 
@@ -39,7 +36,7 @@ func (this *PodInspectionSource) inspection() {
 		for _, pod := range podList.Items {
 			podInspection := this.filter(&pod)
 			if podInspection != nil {
-				//this.localPodBuffer <- podInspection
+				// this.localPodBuffer <- podInspection
 				PodList <- podInspection
 			}
 		}
@@ -74,28 +71,28 @@ func (this *PodInspectionSource) filter(pod *v1.Pod) *entity.PodInspection {
 	return podInspection
 }
 
-func StartWatch(){
-	podInspectionSource,err:=newPodInspectionSource()
-	if err!=nil{
+func StartWatch() {
+	podInspectionSource, err := newPodInspectionSource()
+	if err != nil {
 		return
 	}
 	podInspectionSource.inspection()
 }
 
-func newPodInspectionSource()(*PodInspectionSource,error){
+func newPodInspectionSource() (*PodInspectionSource, error) {
 	kubeCfg, err := kubernetes.GetKubeClientConfig(config.Config.Source.KubernetesURL)
-	if err!=nil{
+	if err != nil {
 		return nil, err
 	}
-	kubeClient,err:=kubernetes.GetKubernetesClient(kubeCfg)
+	kubeClient, err := kubernetes.GetKubernetesClient(kubeCfg)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
-		return nil,err
+		return nil, err
 	}
 	return &PodInspectionSource{
 		stopChannel: make(chan struct{}),
 		podsClient:  kubeClient.CoreV1().Pods(""),
-	},nil
+	}, nil
 }
 
 func getPodStatus(pod *v1.Pod) string {

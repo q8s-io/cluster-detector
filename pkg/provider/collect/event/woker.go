@@ -3,98 +3,17 @@ package event
 import (
 	"time"
 
-	"k8s.io/client-go/informers"
-	"k8s.io/client-go/tools/cache"
-
-	// "fmt"
-	"github.com/q8s-io/cluster-detector/pkg/entity"
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/kubernetes"
-
 	corev1 "k8s.io/api/core/v1"
 	extensions "k8s.io/api/extensions/v1beta1"
 	rbac "k8s.io/api/rbac/v1beta1"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/watch"
-	k8s "k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/informers"
+	"k8s.io/client-go/tools/cache"
 	"k8s.io/klog"
 
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/entity"
 )
-
-const (
-	// Number of object pointers.
-	// Big enough so it won't be hit anytime soon with reasonable GetNewEvents frequency.
-	LocalEventsBufferSize      = 1000 * 100
-	DELETE                     = "Deleted"
-	JobEvent                   = "Job"
-	PodEvent                   = "Pod"
-	DeploymentEvent            = "Deployment"
-	ReplicationControllerEvent = "ReplicationController"
-	NodeEvent                  = "Node"
-	ReplicaSetEvent            = "ReplicaSet"
-	DaemonSetEvent             = "DaemonSet"
-	StatefulSetEvent           = "StatefulSet"
-	NameSpaceEvent             = "NameSpace"
-	ConfigMapEvent             = "ConfigMap"
-	SecretEvent                = "Secret"
-	ServiceEvent               = "Service"
-	IngressEvent               = "Ingress"
-	PersistentVolumeEvent      = "PersistentVolume"
-	ServiceAccountEvent        = "ServiceAccount"
-	ClusterRoleEvent           = "ClusterRole"
-)
-
-type Client struct {
-	KubeClient  k8s.Interface
-	StopChannel chan struct{}
-}
-
-var List chan *entity.EventInspection
-
-func NewKubernetesSource() *chan *entity.EventInspection {
-	List = make(chan *entity.EventInspection, LocalEventsBufferSize)
-	return &List
-}
-
-func GetKubeClient() (*Client, error) {
-
-	cfgUrl := config.Config.Source.KubernetesURL
-
-	kubeConfig, err := kubernetes.GetKubeClientConfig(cfgUrl)
-	if err != nil {
-		return nil, err
-	}
-
-	kubeClient, err := kubernetes.GetKubernetesClient(kubeConfig)
-	if err != nil {
-		klog.Error("Failed to create kubernetes client,because of %v", err)
-		return nil, err
-	}
-	return &Client{
-		KubeClient:  kubeClient,
-		StopChannel: make(chan struct{}),
-	}, nil
-}
-
-func StartWatch() {
-	var c *Client
-	var err error
-	if c, err = GetKubeClient(); err != nil {
-		return
-	}
-	// Outer loop, for reconnections
-	go c.normalWatch()
-	go c.deleteWatch()
-	go c.namespaceWatch()
-	go c.comfigMapWatch()
-	go c.secretEventWatch()
-	go c.serviceEventWatch()
-	go c.ingressEventWatch()
-	go c.persistentVolumeEventWatch()
-	go c.serviceAccountEvent()
-	go c.clusterRoleEventWatch()
-	select {}
-}
 
 func (c *Client) normalWatch() {
 	for {
@@ -161,7 +80,7 @@ func (c *Client) normalWatch() {
 }
 
 func (c *Client) deleteWatch() {
-	//var deleteinformer []cache.SharedIndexInformer
+	// var delete informer []cache.SharedIndexInformer
 	stop := make(chan struct{})
 	defer close(stop)
 	factory := informers.NewSharedInformerFactory(c.KubeClient, time.Second*30)
@@ -175,84 +94,6 @@ func (c *Client) deleteWatch() {
 	statefulSetInformer(factory)
 	go factory.Start(stop)
 	<-stop
-}
-
-//TODO Pod
-func podInformer(factory informers.SharedInformerFactory) {
-	podInformer := factory.Core().V1().Pods().Informer()
-	registerDeleteHandler(podInformer, PodEvent)
-}
-
-//TODO Job
-func jobInformer(factory informers.SharedInformerFactory) {
-	jobInformer := factory.Batch().V1().Jobs().Informer()
-	registerDeleteHandler(jobInformer, JobEvent)
-}
-
-//TODO ReplicaSet
-func replicaSetInformer(factory informers.SharedInformerFactory) {
-	rsInformer := factory.Apps().V1().ReplicaSets().Informer()
-	registerDeleteHandler(rsInformer, ReplicaSetEvent)
-}
-
-//TODO ReplicationController
-func replicationControllerInformer(factory informers.SharedInformerFactory) {
-	rcInformer := factory.Core().V1().ReplicationControllers().Informer()
-	registerDeleteHandler(rcInformer, ReplicationControllerEvent)
-}
-
-//TODO DaemonSet
-func daemonSetInformer(factory informers.SharedInformerFactory) {
-	dsInformer := factory.Apps().V1().DaemonSets().Informer()
-	registerDeleteHandler(dsInformer, DaemonSetEvent)
-}
-
-//TODO Deployment
-func deploymentInformer(factory informers.SharedInformerFactory) {
-	dpInformer := factory.Apps().V1().Deployments().Informer()
-	registerDeleteHandler(dpInformer, DeploymentEvent)
-}
-
-//TODO Node
-func nodeInformer(factory informers.SharedInformerFactory) {
-	nodeInformer := factory.Core().V1().Nodes().Informer()
-	registerDeleteHandler(nodeInformer, NodeEvent)
-}
-
-//TODO StatefulSet
-func statefulSetInformer(factory informers.SharedInformerFactory) {
-	sfInformer := factory.Apps().V1().StatefulSets().Informer()
-	registerDeleteHandler(sfInformer, StatefulSetEvent)
-}
-
-func registerDeleteHandler(informer cache.SharedIndexInformer, resourceType string) {
-	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
-		DeleteFunc: func(obj interface{}) {
-			key, err := cache.MetaNamespaceKeyFunc(obj)
-			if err != nil {
-				klog.Infof("can't get delete resource namespace and name\n")
-			}
-			nameSpace, name, err := cache.SplitMetaNamespaceKey(key)
-			if err != nil {
-				klog.Infof("can't split delete resource namespace and name\n")
-			}
-
-			inspection := &entity.EventInspection{
-				EventKind:         resourceType,
-				EventNamespace:    nameSpace,
-				EventResourceName: name,
-				EventType:         DELETE,
-				EventTime:         time.Now(),
-				EventInfo:         obj,
-			}
-			select {
-			case List <- inspection:
-				//OK not full
-			default:
-				klog.Info("Event buffer full, dropping event")
-			}
-		},
-	})
 }
 
 func (c *Client) namespaceWatch() {
@@ -319,7 +160,7 @@ func (c *Client) namespaceWatch() {
 	}
 }
 
-func (c *Client) comfigMapWatch() {
+func (c *Client) configMapWatch() {
 	for {
 		// Do not write old events.
 		events, err := c.KubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).List(metav1.ListOptions{})
@@ -765,4 +606,84 @@ func (c *Client) clusterRoleEventWatch() {
 			}
 		}
 	}
+}
+
+// TODO Pod
+func podInformer(factory informers.SharedInformerFactory) {
+	podInformer := factory.Core().V1().Pods().Informer()
+	registerDeleteHandler(podInformer, PodEvent)
+}
+
+// TODO Job
+func jobInformer(factory informers.SharedInformerFactory) {
+	jobInformer := factory.Batch().V1().Jobs().Informer()
+	registerDeleteHandler(jobInformer, JobEvent)
+}
+
+// TODO ReplicaSet
+func replicaSetInformer(factory informers.SharedInformerFactory) {
+	rsInformer := factory.Apps().V1().ReplicaSets().Informer()
+	registerDeleteHandler(rsInformer, ReplicaSetEvent)
+}
+
+// TODO ReplicationController
+func replicationControllerInformer(factory informers.SharedInformerFactory) {
+	rcInformer := factory.Core().V1().ReplicationControllers().Informer()
+	registerDeleteHandler(rcInformer, ReplicationControllerEvent)
+}
+
+// TODO DaemonSet
+func daemonSetInformer(factory informers.SharedInformerFactory) {
+	dsInformer := factory.Apps().V1().DaemonSets().Informer()
+	registerDeleteHandler(dsInformer, DaemonSetEvent)
+}
+
+// TODO Deployment
+func deploymentInformer(factory informers.SharedInformerFactory) {
+	dpInformer := factory.Apps().V1().Deployments().Informer()
+	registerDeleteHandler(dpInformer, DeploymentEvent)
+}
+
+// TODO Node
+func nodeInformer(factory informers.SharedInformerFactory) {
+	nodeInformer := factory.Core().V1().Nodes().Informer()
+	registerDeleteHandler(nodeInformer, NodeEvent)
+}
+
+// TODO StatefulSet
+func statefulSetInformer(factory informers.SharedInformerFactory) {
+	sfInformer := factory.Apps().V1().StatefulSets().Informer()
+	registerDeleteHandler(sfInformer, StatefulSetEvent)
+}
+
+func registerDeleteHandler(informer cache.SharedIndexInformer, resourceType string) {
+	informer.AddEventHandler(cache.ResourceEventHandlerFuncs{
+		DeleteFunc: func(obj interface{}) {
+			key, err := cache.MetaNamespaceKeyFunc(obj)
+			if err != nil {
+				klog.Infof("can't get delete resource namespace and name\n")
+				return
+			}
+			nameSpace, name, err := cache.SplitMetaNamespaceKey(key)
+			if err != nil {
+				klog.Infof("can't split delete resource namespace and name\n")
+				return
+			}
+
+			inspection := &entity.EventInspection{
+				EventKind:         resourceType,
+				EventNamespace:    nameSpace,
+				EventResourceName: name,
+				EventType:         DELETE,
+				EventTime:         time.Now(),
+				EventInfo:         obj,
+			}
+			select {
+			case List <- inspection:
+				// OK not full
+			default:
+				klog.Info("Event buffer full, dropping event")
+			}
+		},
+	})
 }

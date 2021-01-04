@@ -10,7 +10,7 @@ import (
 	"k8s.io/apimachinery/pkg/labels"
 	cliresource "k8s.io/cli-runtime/pkg/resource"
 
-	resource "github.com/q8s-io/cluster-detector/pkg/provider/kube/unused"
+	resource "github.com/q8s-io/cluster-detector/pkg/provider/collect/release"
 )
 
 var checkVolumeSatisfyClaimFunc = resource.CheckVolumeSatisfyClaim

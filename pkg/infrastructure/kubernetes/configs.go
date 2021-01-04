@@ -8,8 +8,6 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/client-go/tools/clientcmd/api"
 	"k8s.io/klog"
 
 	"github.com/q8s-io/cluster-detector/pkg/entity"
@@ -17,31 +15,9 @@ import (
 )
 
 const (
-	APIVersion                = "v1"
-	defaultUseServiceAccount  = false
-	defaultServiceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
-	defaultInClusterConfig    = true
-	kubeConfig                = "./configs/kubeconfig"
+	defaultUseServiceAccount = false
+	defaultInClusterConfig   = true
 )
-
-func getConfigOverrides(uri *url.URL) (*clientcmd.ConfigOverrides, error) {
-	kubeConfigOverride := clientcmd.ConfigOverrides{
-		ClusterInfo: api.Cluster{},
-	}
-	if len(uri.Scheme) != 0 && len(uri.Host) != 0 {
-		kubeConfigOverride.ClusterInfo.Server = fmt.Sprintf("%s://%s", uri.Scheme, uri.Host)
-	}
-	opts := uri.Query()
-	if len(opts["insecure"]) > 0 {
-		insecure, err := strconv.ParseBool(opts["insecure"][0])
-		if err != nil {
-			klog.Error(err)
-			return nil, err
-		}
-		kubeConfigOverride.ClusterInfo.InsecureSkipTLSVerify = insecure
-	}
-	return &kubeConfigOverride, nil
-}
 
 func GetInfoFromUrl(uri string) (*entity.UrlInfo, error) {
 	// init default value
@@ -56,9 +32,7 @@ func GetInfoFromUrl(uri string) (*entity.UrlInfo, error) {
 		klog.Error(parseErr)
 		return nil, parseErr
 	}
-	// kubeConfigOverride := clientcmd.ConfigOverrides{
-	// 	ClusterInfo: api.Cluster{},
-	// }
+
 	if len(requestURI.Scheme) != 0 && len(requestURI.Host) != 0 {
 		urlInfo.Server = fmt.Sprintf("%s://%s", requestURI.Scheme, requestURI.Host)
 	}

@@ -2,38 +2,30 @@ package controller
 
 import (
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect"
 	"github.com/q8s-io/cluster-detector/pkg/provider/filter"
-	"github.com/q8s-io/cluster-detector/pkg/provider/kube"
 )
 
 func RunKafka() {
-	//cfgSource := config.Config.Source
-	kafkaEventCfg := &config.Config.EventsConfig.KafkaEventConfig
-	kafkaPodCfg:=&config.Config.PodInspectionConfig
-	kafkaNodeCfg:=&config.Config.NodeInspectionConfig
-	kafkaDeleteCfg:=&config.Config.DeleteInspectionConfig
-	if kafkaEventCfg.Enabled == true {
-		sourceFactory := kube.NewSourceFactory()
+	// cfgSource := config.Config.Source
+	cfg := &config.Config
+	sourceFactory := collect.NewSourceFactory()
+	eventFilter := filter.NewFilterFactory()
+
+	if cfg.EventsConfig.KafkaEventConfig.Enabled == true {
 		eventResources := sourceFactory.BuildEvents()
-		eventFilter := filter.NewFilterFactory()
 		eventFilter.KafkaFilter(eventResources, &config.Config)
 	}
-	if kafkaPodCfg.Enabled==true{
-		sourceFactory := kube.NewSourceFactory()
+	if cfg.PodInspectionConfig.Enabled == true {
 		eventResources := sourceFactory.BuildPods()
-		eventFilter := filter.NewFilterFactory()
 		eventFilter.KafkaFilter(eventResources, &config.Config)
 	}
-	if kafkaNodeCfg.Enabled==true{
-		sourceFactory := kube.NewSourceFactory()
+	if cfg.NodeInspectionConfig.Enabled == true {
 		eventResources := sourceFactory.BuildNodes()
-		eventFilter := filter.NewFilterFactory()
 		eventFilter.KafkaFilter(eventResources, &config.Config)
 	}
-	if kafkaDeleteCfg.Enabled==true{
-		sourceFactory := kube.NewSourceFactory()
+	if cfg.DeleteInspectionConfig.Enabled == true {
 		eventResources := sourceFactory.BuildDeletes()
-		eventFilter := filter.NewFilterFactory()
 		eventFilter.KafkaFilter(eventResources, &config.Config)
 	}
 }

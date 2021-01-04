@@ -2,7 +2,7 @@ package entity
 
 import (
 	"encoding/json"
-	//"github.com/q8s-io/cluster-detector/pkg/provider/kube"
+	//"github.com/q8s-io/cluster-detector/pkg/provider/collect"
 	"time"
 )
 
@@ -13,7 +13,7 @@ type EventInspection struct {
 	EventType         string
 	EventTime         time.Time
 	EventInfo         interface{}
-	//EventUID		  string
+	// EventUID		  string
 }
 
 type EventBatch struct {
@@ -60,7 +60,7 @@ func (this EventSinkPoint) EventToPoint(event *EventInspection) (*EventSinkPoint
 		return nil, err
 	}
 	point := EventSinkPoint{
-		EventTimestamp: event.EventTime, //event.LastTimestamp.Time.UTC(),
+		EventTimestamp: event.EventTime, // event.LastTimestamp.Time.UTC(),
 		EventValue:     value,
 		/*EventTags: map[string]string{
 			"eventID": event.EventUID,

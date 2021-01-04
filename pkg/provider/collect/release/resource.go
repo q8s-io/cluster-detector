@@ -1,4 +1,4 @@
-package resource
+package release
 
 import (
 	autoscalingv1 "k8s.io/api/autoscaling/v1"

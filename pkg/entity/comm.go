@@ -10,6 +10,7 @@ const (
 	APIVersion                = "v1"
 	DefaultServiceAccountFile = "/var/run/secrets/kubernetes.io/serviceaccount/token"
 	ContentType               = "application/vnd.kubernetes.protobuf"
+	DefaultBufSize            = 1000 * 10
 )
 
 type UrlInfo struct {

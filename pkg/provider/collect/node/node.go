@@ -18,10 +18,10 @@ const (
 	DefaultGetNodeTimeout = 10
 )
 
-type NodeInspectionSource struct {
+type InspectionSource struct {
 	// Large local buffer, periodically read.
 	// channel's element size does not exceed 65535 bytes, so the pointer is used
-	//localNodeBuffer chan *nodecore.NodeInspection
+	// localNodeBuffer chan *nodecore.NodeInspection
 	// count node num
 	num         int
 	stopChannel chan struct{}
@@ -35,7 +35,7 @@ func NewKubernetesSource() *chan *nodecore.NodeInspection {
 	return &NodeList
 }
 
-func (this *NodeInspectionSource) inspection() {
+func (this *InspectionSource) inspection() {
 	for {
 		nodeList, listErr := this.nodeClient.List(metav1.ListOptions{})
 		if listErr != nil {
@@ -64,28 +64,26 @@ func (this *NodeInspectionSource) inspection() {
 	}
 }
 
-
-func newNodeInspectionSource()(*NodeInspectionSource,error){
+func newNodeInspectionSource() (*InspectionSource, error) {
 	kubeCfg, err := kubernetes.GetKubeClientConfig(config.Config.Source.KubernetesURL)
-	if err!=nil{
+	if err != nil {
 		return nil, err
 	}
-	kubeClient,err:=kubernetes.GetKubernetesClient(kubeCfg)
+	kubeClient, err := kubernetes.GetKubernetesClient(kubeCfg)
 	if err != nil {
 		klog.Errorf("Failed to create kubernetes client, because of %v", err)
-		return nil,err
+		return nil, err
 	}
-	return &NodeInspectionSource{
+	return &InspectionSource{
 		stopChannel: make(chan struct{}),
 		nodeClient:  kubeClient.CoreV1().Nodes(),
-	},nil
+	}, nil
 }
 
-func StartWatch(){
-	nodeInspectionSource,err:=newNodeInspectionSource()
-	if err!=nil{
+func StartWatch() {
+	nodeInspectionSource, err := newNodeInspectionSource()
+	if err != nil {
 		return
 	}
 	nodeInspectionSource.inspection()
 }
-

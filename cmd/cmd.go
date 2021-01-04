@@ -9,6 +9,10 @@ import (
 	"github.com/q8s-io/cluster-detector/pkg/controller"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/basicPrepare"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/event"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/node"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/pod"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release"
 )
 
 var (
@@ -37,16 +41,16 @@ func runApps() {
 	controller.RunKafka()
 	// Start watch resource of cluster
 	if cfg.EventsConfig.Enabled == true {
-		controller.RunEventsWatch()
+		go event.StartWatch()
 	}
 	if cfg.DeleteInspectionConfig.Enabled == true {
-		go controller.RunUnusedInspection()
+		go release.StartWatch()
 	}
-	 if config.Config.NodeInspectionConfig.Enabled == true {
-	 	controller.RunNodeInspection()
-	 }
+	if config.Config.NodeInspectionConfig.Enabled == true {
+		go node.StartWatch()
+	}
 	if cfg.PodInspectionConfig.Enabled == true {
-		controller.RunPodInspection()
+		go pod.StartWatch()
 	}
 	go controller.Sink()
 	go controller.StartHTTPServer(*argHealthyIP, *argHealthyPort)

@@ -48,8 +48,8 @@ spec:
         - name: zoneinfo
           mountPath: /usr/share/zoneinfo
           readOnly: true
-        - name: kube-config
-          mountPath: /root/.kube
+        - name: collect-config
+          mountPath: /root/.collect
         - name: config
           mountPath: /configs
         imagePullPolicy: Always
@@ -61,7 +61,7 @@ spec:
             cpu: 500m
             memory: 250Mi
       volumes:
-      - name: kube-config
+      - name: collect-config
         configMap:
           name: kubeconfig
       - name: localtime
