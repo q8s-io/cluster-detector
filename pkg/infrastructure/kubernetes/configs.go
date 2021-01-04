@@ -109,22 +109,8 @@ func GetKubeClientConfig(uri string) (*rest.Config, error) {
 	if err != nil {
 		return nil, err
 	}
-
 	return dto.ConvertKubeCfg(urlInfo)
 }
-
-// func GetKubernetesClient(uri *url.URL) (client kubernetes.Interface, err error) {
-// 	kubeConfig, err := GetKubeClientConfig(uri)
-// 	if err != nil {
-// 		return nil, err
-// 	}
-// 	kubeClient, err := kubernetes.NewForConfig(kubeConfig)
-// 	if err != nil {
-// 		klog.Error(err)
-// 		return nil, err
-// 	}
-// 	return kubeClient, nil
-// }
 
 func GetKubernetesClient(kubeConfig *rest.Config) (kubernetes.Interface, error) {
 	kubeClient, err := kubernetes.NewForConfig(kubeConfig)

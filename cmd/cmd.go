@@ -39,15 +39,15 @@ func runApps() {
 	if cfg.EventsConfig.Enabled == true {
 		controller.RunEventsWatch()
 	}
-	// if cfg.DeleteInspectionConfig.Enabled == true {
-	// 	go controller.RunUnusedInspection()
-	// }
-	// if config.Config.NodeInspectionConfig.Enabled == true {
-	// 	go controller.RunNodeInspection()
-	// }
-	// if cfg.PodInspectionConfig.Enabled == true {
-	// 	go controller.RunPodInspection()
-	// }
+	if cfg.DeleteInspectionConfig.Enabled == true {
+		go controller.RunUnusedInspection()
+	}
+	 if config.Config.NodeInspectionConfig.Enabled == true {
+	 	controller.RunNodeInspection()
+	 }
+	if cfg.PodInspectionConfig.Enabled == true {
+		controller.RunPodInspection()
+	}
 	go controller.Sink()
 	go controller.StartHTTPServer(*argHealthyIP, *argHealthyPort)
 	<-quitChannel

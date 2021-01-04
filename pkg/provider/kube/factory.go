@@ -2,8 +2,9 @@ package kube
 
 import (
 	"github.com/q8s-io/cluster-detector/pkg/entity"
-	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 	"github.com/q8s-io/cluster-detector/pkg/provider/kube/event"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/node"
+	"github.com/q8s-io/cluster-detector/pkg/provider/kube/pod"
 )
 
 type SourceFactory struct{}
@@ -12,8 +13,20 @@ func NewSourceFactory() *SourceFactory {
 	return &SourceFactory{}
 }
 
-func (_ *SourceFactory) BuildEvents(source config.Source) *chan *entity.EventInspection {
+func (_ *SourceFactory) BuildEvents() *chan *entity.EventInspection {
 	return event.NewKubernetesSource()
+}
+
+func (_ *SourceFactory) BuildPods()*chan *entity.PodInspection{
+	return pod.NewKubernetesSource()
+}
+
+func (_ *SourceFactory) BuildNodes()*chan *entity.NodeInspection{
+	return node.NewKubernetesSource()
+}
+
+func (_ *SourceFactory) BuildDeletes()*chan *entity.DeleteInspection{
+	return NewKubernetesSource()
 }
 
 // func (_ *SourceFactory) BuildUnusedResource(source config.Source) (*chan *entity.DeleteInspection, error) {
