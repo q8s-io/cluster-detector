@@ -1,8 +1,7 @@
-package provider
+package sinks
 
 import (
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
-	"github.com/q8s-io/cluster-detector/pkg/provider/sinks"
 )
 
 func Sink() {
@@ -11,7 +10,7 @@ func Sink() {
 		cfg.PodInspectionConfig.KafkaPodConfig.Enabled == true ||
 		cfg.NodeInspectionConfig.KafkaNodeConfig.Enabled == true ||
 		cfg.EventsConfig.KafkaEventConfig.Enabled == true {
-		sink := sinks.NewSinkFactory()
+		sink := NewSinkFactory()
 		sink.BuildKafka()
 	}
 }

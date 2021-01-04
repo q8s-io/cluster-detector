@@ -14,6 +14,7 @@ import (
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/pod"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release"
 	"github.com/q8s-io/cluster-detector/pkg/provider/filter/kafka"
+	"github.com/q8s-io/cluster-detector/pkg/provider/sinks"
 )
 
 var (
@@ -53,7 +54,7 @@ func runApps() {
 	if cfg.PodInspectionConfig.Enabled == true {
 		go pod.StartWatch()
 	}
-	go provider.Sink()
+	go sinks.Sink()
 	go provider.StartHTTPServer(*argHealthyIP, *argHealthyPort)
 	<-quitChannel
 }
