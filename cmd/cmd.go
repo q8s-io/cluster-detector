@@ -13,7 +13,7 @@ import (
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/event"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/node"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/pod"
-	delete2 "github.com/q8s-io/cluster-detector/pkg/provider/collect/release/delete"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release/delete"
 	"github.com/q8s-io/cluster-detector/pkg/provider/sinks"
 )
 
@@ -46,7 +46,7 @@ func runApps() {
 		go event.StartWatch()
 	}
 	if cfg.DeleteInspectionConfig.Enabled == true {
-		go delete2.StartWatch()
+		go delete.StartWatch()
 	}
 	if config.Config.NodeInspectionConfig.Enabled == true {
 		go node.StartWatch()
