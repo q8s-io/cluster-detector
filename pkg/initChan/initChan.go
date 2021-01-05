@@ -1,9 +1,16 @@
-package kafka
+package initChan
 
 import (
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect"
 	"github.com/q8s-io/cluster-detector/pkg/provider/filter"
+)
+
+const (
+	EventType  = "event"
+	PodType    = "pod"
+	NodeType   = "node"
+	DeleteType = "delete"
 )
 
 // start
@@ -14,19 +21,19 @@ func RunKafka() {
 	filterFactory := filter.NewFilterFactory()
 
 	if cfg.EventsConfig.KafkaEventConfig.Enabled == true {
-		eventResources := sourceFactory.BuildEvents()
-		filterFactory.KafkaFilter(eventResources, &config.Config)
+		sourceFactory.InitEventChan()
+		filterFactory.KafkaFilter(EventType, &config.Config)
 	}
 	if cfg.PodInspectionConfig.Enabled == true {
-		podResources := sourceFactory.BuildPods()
-		filterFactory.KafkaFilter(podResources, &config.Config)
+		sourceFactory.InitPodChan()
+		filterFactory.KafkaFilter(PodType, &config.Config)
 	}
 	if cfg.NodeInspectionConfig.Enabled == true {
-		nodeResources := sourceFactory.BuildNodes()
-		filterFactory.KafkaFilter(nodeResources, &config.Config)
+		sourceFactory.InitNodeChan()
+		filterFactory.KafkaFilter(NodeType, &config.Config)
 	}
 	if cfg.DeleteInspectionConfig.Enabled == true {
-		deleteResources := sourceFactory.BuildDeletes()
-		filterFactory.KafkaFilter(deleteResources, &config.Config)
+		sourceFactory.InitDeleteChan()
+		filterFactory.KafkaFilter(DeleteType, &config.Config)
 	}
 }

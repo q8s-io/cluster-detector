@@ -1,4 +1,4 @@
-package release
+package delete
 
 import (
 	"context"
@@ -14,14 +14,14 @@ import (
 
 	"github.com/q8s-io/cluster-detector/pkg/entity"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
-	"github.com/q8s-io/cluster-detector/pkg/provider/collect/determiner"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release/determiner"
 )
 
-var UnusedResourceList chan *entity.DeleteInspection
+var DeleteResourceListCh chan *entity.DeleteInspection
 
-func NewKubernetesSource() *chan *entity.DeleteInspection {
-	UnusedResourceList = make(chan *entity.DeleteInspection, entity.DefaultBufSize)
-	return &UnusedResourceList
+func NewKubernetesSource() {
+	DeleteResourceListCh = make(chan *entity.DeleteInspection, entity.DefaultBufSize)
 }
 
 type runner struct {
@@ -65,7 +65,7 @@ func (r *runner) Complete(f util.Factory) (err error) {
 	if err != nil {
 		return
 	}
-	resourceClient := NewClient(clientSet, r.dynamicClient)
+	resourceClient := release.NewClient(clientSet, r.dynamicClient)
 	namespace := r.namespace
 	if r.allNamespaces {
 		namespace = metav1.NamespaceAll
@@ -103,7 +103,7 @@ func (r *runner) Run(ctx context.Context, f util.Factory) (err error) {
 		if !ok {
 			return nil // skip deletion
 		}
-		UnusedResourceList <- &entity.DeleteInspection{
+		DeleteResourceListCh <- &entity.DeleteInspection{
 			Kind:      info.Object.GetObjectKind().GroupVersionKind().Kind,
 			NameSpace: info.Namespace,
 			Name:      info.Name,

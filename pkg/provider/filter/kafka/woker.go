@@ -8,6 +8,10 @@ import (
 	"github.com/q8s-io/cluster-detector/pkg/entity"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
 	"github.com/q8s-io/cluster-detector/pkg/log"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/event"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/node"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/pod"
+	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release/delete"
 )
 
 const BufferSize = 10000
@@ -35,29 +39,20 @@ type skipNode struct {
 	sync.RWMutex
 }
 
-type eventsCh chan *entity.EventInspection
-type podsCh chan *entity.PodInspection
-type nodesCh chan *entity.NodeInspection
-type deletesCh chan *entity.DeleteInspection
-
-func Filter(source interface{}, kafkaConfig *config.Runtime) {
-	switch filter := source.(type) {
-	case *chan *entity.EventInspection:
-		f := eventsCh(*filter)
-		f.eventKafkaFilter(&kafkaConfig.EventsConfig.KafkaEventConfig)
-	case *chan *entity.PodInspection:
-		f := podsCh(*filter)
-		f.podKafkaFilter(&kafkaConfig.PodInspectionConfig.KafkaPodConfig)
-	case *chan *entity.DeleteInspection:
-		f := deletesCh(*filter)
-		f.deleteKafkaFilter(&kafkaConfig.DeleteInspectionConfig.KafkaDeleteConfig)
-	case *chan *entity.NodeInspection:
-		f := nodesCh(*filter)
-		f.nodeKafkaFilter()
+func Filter(sourceType string, kafkaConfig *config.Runtime) {
+	switch sourceType {
+	case "event":
+		eventKafkaFilter(&kafkaConfig.EventsConfig.KafkaEventConfig)
+	case "pod":
+		podKafkaFilter(&kafkaConfig.PodInspectionConfig.KafkaPodConfig)
+	case "node":
+		nodeKafkaFilter()
+	case "delete":
+		deleteKafkaFilter(&kafkaConfig.DeleteInspectionConfig.KafkaDeleteConfig)
 	}
 }
 
-func (event *eventsCh) eventKafkaFilter(kafkaConfig *config.KafkaEventConfig) {
+func eventKafkaFilter(kafkaConfig *config.KafkaEventConfig) {
 	skips := skipEvent{
 		namespaces: kafkaConfig.Namespaces,
 		kinds:      kafkaConfig.Kinds,
@@ -65,7 +60,7 @@ func (event *eventsCh) eventKafkaFilter(kafkaConfig *config.KafkaEventConfig) {
 	skips.Lock()
 	defer skips.Unlock()
 	go func() {
-		for e := range *event {
+		for e := range event.EventListCh {
 			if !skips.skip(e) {
 				mes := log.Mess{
 					Namespace: e.EventNamespace,
@@ -108,14 +103,14 @@ func (s *skipEvent) skip(event *entity.EventInspection) bool {
 	return false
 }
 
-func (pod *podsCh) podKafkaFilter(kafkaConfig *config.KafkaPodConfig) {
+func podKafkaFilter(kafkaConfig *config.KafkaPodConfig) {
 	skips := skipPod{
 		namespaces: kafkaConfig.Namespaces,
 	}
 	skips.Lock()
 	defer skips.Unlock()
 	go func() {
-		for p := range *pod {
+		for p := range pod.PodListCh {
 			if !skips.skip(p) {
 				mes := log.Mess{
 					Namespace: p.Namespace,
@@ -155,7 +150,7 @@ func (s *skipPod) skip(pod *entity.PodInspection) bool {
 	return false
 }
 
-func (delete *deletesCh) deleteKafkaFilter(kafkaConfig *config.KafkaDeleteConfig) {
+func deleteKafkaFilter(kafkaConfig *config.KafkaDeleteConfig) {
 	skips := skipDelete{
 		namespaces: kafkaConfig.Namespaces,
 		kinds:      kafkaConfig.Kinds,
@@ -164,7 +159,7 @@ func (delete *deletesCh) deleteKafkaFilter(kafkaConfig *config.KafkaDeleteConfig
 	skips.Lock()
 	defer skips.Unlock()
 	go func() {
-		for d := range *delete {
+		for d := range delete.DeleteResourceListCh {
 			if !skips.skip(d) {
 				mes := log.Mess{
 					Namespace: d.NameSpace,
@@ -207,12 +202,12 @@ func (s *skipDelete) skip(delete *entity.DeleteInspection) bool {
 	return false
 }
 
-func (node *nodesCh) nodeKafkaFilter() {
+func nodeKafkaFilter() {
 	skips := skipNode{}
 	skips.Lock()
 	defer skips.Unlock()
 	go func() {
-		for n := range *node {
+		for n := range node.NodeListCh {
 			mes := log.Mess{
 				Namespace: "",
 				Name:      n.Name,

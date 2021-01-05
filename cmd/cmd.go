@@ -8,12 +8,12 @@ import (
 
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/basicPrepare"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
+	"github.com/q8s-io/cluster-detector/pkg/initChan"
 	"github.com/q8s-io/cluster-detector/pkg/provider"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/event"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/node"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/pod"
-	"github.com/q8s-io/cluster-detector/pkg/provider/collect/release"
-	"github.com/q8s-io/cluster-detector/pkg/provider/filter/kafka"
+	delete2 "github.com/q8s-io/cluster-detector/pkg/provider/collect/release/delete"
 	"github.com/q8s-io/cluster-detector/pkg/provider/sinks"
 )
 
@@ -40,13 +40,13 @@ func runApps() {
 	quitChannel := make(chan struct{}, 0)
 	defer close(quitChannel)
 
-	kafka.RunKafka()
+	initChan.RunKafka()
 	// Start watch resource of cluster
 	if cfg.EventsConfig.Enabled == true {
 		go event.StartWatch()
 	}
 	if cfg.DeleteInspectionConfig.Enabled == true {
-		go release.StartWatch()
+		go delete2.StartWatch()
 	}
 	if config.Config.NodeInspectionConfig.Enabled == true {
 		go node.StartWatch()

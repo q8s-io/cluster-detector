@@ -61,7 +61,7 @@ func (c *Client) normalWatch() {
 						//	EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -99,12 +99,12 @@ func (c *Client) deleteWatch() {
 func (c *Client) namespaceWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.CoreV1().Namespaces().List(metav1.ListOptions{})
+		namespaceEvents, err := c.KubeClient.CoreV1().Namespaces().List(metav1.ListOptions{})
 		if err != nil {
 			klog.Infof("Failed to load NameSpace events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := namespaceEvents.ResourceVersion
 		watcher, err := c.KubeClient.CoreV1().Namespaces().Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -142,7 +142,7 @@ func (c *Client) namespaceWatch() {
 						//	EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -163,12 +163,12 @@ func (c *Client) namespaceWatch() {
 func (c *Client) configMapWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).List(metav1.ListOptions{})
+		configMapEvents, err := c.KubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Infof("Failed to load ComfigMap events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := configMapEvents.ResourceVersion
 		watcher, err := c.KubeClient.CoreV1().ConfigMaps(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -206,7 +206,7 @@ func (c *Client) configMapWatch() {
 						//		EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -227,12 +227,12 @@ func (c *Client) configMapWatch() {
 func (c *Client) secretEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.CoreV1().Secrets(corev1.NamespaceAll).List(metav1.ListOptions{})
+		secretEvents, err := c.KubeClient.CoreV1().Secrets(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load Secret events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := secretEvents.ResourceVersion
 		watcher, err := c.KubeClient.CoreV1().Secrets(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -270,7 +270,7 @@ func (c *Client) secretEventWatch() {
 						//		EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -291,12 +291,12 @@ func (c *Client) secretEventWatch() {
 func (c *Client) serviceEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.CoreV1().Services(corev1.NamespaceAll).List(metav1.ListOptions{})
+		serviceEvents, err := c.KubeClient.CoreV1().Services(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load Service events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := serviceEvents.ResourceVersion
 		watcher, err := c.KubeClient.CoreV1().Services(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -334,7 +334,7 @@ func (c *Client) serviceEventWatch() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -355,12 +355,12 @@ func (c *Client) serviceEventWatch() {
 func (c *Client) ingressEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).List(metav1.ListOptions{})
+		ingressEvents, err := c.KubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load Ingress events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := ingressEvents.ResourceVersion
 		watcher, err := c.KubeClient.ExtensionsV1beta1().Ingresses(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -398,7 +398,7 @@ func (c *Client) ingressEventWatch() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -419,12 +419,12 @@ func (c *Client) ingressEventWatch() {
 func (c *Client) persistentVolumeEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
+		persistentVolumeEvents, err := c.KubeClient.CoreV1().PersistentVolumes().List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load PersistentVolume events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := persistentVolumeEvents.ResourceVersion
 		watcher, err := c.KubeClient.CoreV1().PersistentVolumes().Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -462,7 +462,7 @@ func (c *Client) persistentVolumeEventWatch() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -483,12 +483,12 @@ func (c *Client) persistentVolumeEventWatch() {
 func (c *Client) serviceAccountEvent() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).List(metav1.ListOptions{})
+		serviceAccounts, err := c.KubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load ServiceAccount events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := serviceAccounts.ResourceVersion
 		watcher, err := c.KubeClient.CoreV1().ServiceAccounts(corev1.NamespaceAll).Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -526,7 +526,7 @@ func (c *Client) serviceAccountEvent() {
 						//			EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -547,12 +547,12 @@ func (c *Client) serviceAccountEvent() {
 func (c *Client) clusterRoleEventWatch() {
 	for {
 		// Do not write old events.
-		events, err := c.KubeClient.RbacV1beta1().ClusterRoles().List(metav1.ListOptions{})
+		clusterRoleEvents, err := c.KubeClient.RbacV1beta1().ClusterRoles().List(metav1.ListOptions{})
 		if err != nil {
 			klog.Errorf("Failed to load ClusterRole events: %v", err)
 			continue
 		}
-		resourceVersion := events.ResourceVersion
+		resourceVersion := clusterRoleEvents.ResourceVersion
 		watcher, err := c.KubeClient.RbacV1beta1().ClusterRoles().Watch(
 			metav1.ListOptions{
 				Watch:           true,
@@ -590,7 +590,7 @@ func (c *Client) clusterRoleEventWatch() {
 						//		EventUID: string(event.UID),
 					}
 					select {
-					case List <- newEvent:
+					case EventListCh <- newEvent:
 						// Ok, buffer not full.
 					default:
 						// Buffer full, need to drop the event.
@@ -679,7 +679,7 @@ func registerDeleteHandler(informer cache.SharedIndexInformer, resourceType stri
 				EventInfo:         obj,
 			}
 			select {
-			case List <- inspection:
+			case EventListCh <- inspection:
 				// OK not full
 			default:
 				klog.Info("Event buffer full, dropping event")

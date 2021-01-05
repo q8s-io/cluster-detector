@@ -19,11 +19,10 @@ type PodInspectionSource struct {
 	podsClient  kubev1core.PodInterface
 }
 
-var PodList chan *entity.PodInspection
+var PodListCh chan *entity.PodInspection
 
-func NewKubernetesSource() *chan *entity.PodInspection {
-	PodList = make(chan *entity.PodInspection, entity.DefaultBufSize)
-	return &PodList
+func NewKubernetesSource() {
+	PodListCh = make(chan *entity.PodInspection, entity.DefaultBufSize)
 }
 
 func (this *PodInspectionSource) inspection() {
@@ -37,7 +36,7 @@ func (this *PodInspectionSource) inspection() {
 			podInspection := this.filter(&pod)
 			if podInspection != nil {
 				// this.localPodBuffer <- podInspection
-				PodList <- podInspection
+				PodListCh <- podInspection
 			}
 		}
 		time.Sleep(time.Second * time.Duration(config.Config.PodInspectionConfig.Speed))

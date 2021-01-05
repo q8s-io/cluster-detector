@@ -28,11 +28,10 @@ type InspectionSource struct {
 	nodeClient  kubev1core.NodeInterface
 }
 
-var NodeList chan *nodecore.NodeInspection
+var NodeListCh chan *nodecore.NodeInspection
 
-func NewKubernetesSource() *chan *nodecore.NodeInspection {
-	NodeList = make(chan *nodecore.NodeInspection, LocalNodesBufferSize)
-	return &NodeList
+func NewKubernetesSource() {
+	NodeListCh = make(chan *nodecore.NodeInspection, LocalNodesBufferSize)
 }
 
 func (this *InspectionSource) inspection() {
@@ -57,7 +56,7 @@ func (this *InspectionSource) inspection() {
 				inspection.Status = "NotReady"
 			}
 			inspection.Conditions = node.Status.Conditions
-			NodeList <- inspection
+			NodeListCh <- inspection
 			//	this.localNodeBuffer <- inspection
 		}
 		time.Sleep(time.Second * time.Duration(config.Config.NodeInspectionConfig.Speed))

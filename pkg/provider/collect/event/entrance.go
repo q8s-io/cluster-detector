@@ -36,11 +36,10 @@ type Client struct {
 	StopChannel chan struct{}
 }
 
-var List chan *entity.EventInspection
+var EventListCh chan *entity.EventInspection
 
-func NewKubernetesSource() *chan *entity.EventInspection {
-	List = make(chan *entity.EventInspection, entity.DefaultBufSize)
-	return &List
+func NewKubernetesSource() {
+	EventListCh = make(chan *entity.EventInspection, entity.DefaultBufSize)
 }
 
 func GetKubeClient() (*Client, error) {
