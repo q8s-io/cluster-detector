@@ -16,6 +16,13 @@ import (
 
 const BufferSize = 10000
 
+const (
+	EventType  = "event"
+	PodType    = "pod"
+	NodeType   = "node"
+	DeleteType = "delete"
+)
+
 var FilterKafka = make(chan *log.Mess, BufferSize)
 
 type skipEvent struct {
@@ -41,13 +48,13 @@ type skipNode struct {
 
 func Filter(sourceType string, kafkaConfig *config.Runtime) {
 	switch sourceType {
-	case "event":
+	case EventType:
 		eventKafkaFilter(&kafkaConfig.EventsConfig.KafkaEventConfig)
-	case "pod":
+	case PodType:
 		podKafkaFilter(&kafkaConfig.PodInspectionConfig.KafkaPodConfig)
-	case "node":
+	case NodeType:
 		nodeKafkaFilter()
-	case "delete":
+	case DeleteType:
 		deleteKafkaFilter(&kafkaConfig.DeleteInspectionConfig.KafkaDeleteConfig)
 	}
 }
