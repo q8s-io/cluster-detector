@@ -8,16 +8,15 @@ import (
 	"k8s.io/client-go/dynamic"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
-	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/klog"
 
 	"github.com/q8s-io/cluster-detector/pkg/entity"
+	"github.com/q8s-io/cluster-detector/pkg/entity/dto"
 )
 
 const (
 	defaultUseServiceAccount = false
 	defaultInClusterConfig   = true
-	kubeConfig               = "./configs/kubeconfig"
 )
 
 func GetInfoFromUrl(uri string) (*entity.UrlInfo, error) {
@@ -80,13 +79,11 @@ func GetInfoFromUrl(uri string) (*entity.UrlInfo, error) {
 }
 
 func GetKubeClientConfig(uri string) (*rest.Config, error) {
-	/*urlInfo, err := GetInfoFromUrl(uri)
+	urlInfo, err := GetInfoFromUrl(uri)
 	if err != nil {
 		return nil, err
 	}
-	return dto.ConvertKubeCfg(urlInfo)*/
-	kubeClient, err := clientcmd.BuildConfigFromFlags("", kubeConfig)
-	return kubeClient, err
+	return dto.ConvertKubeCfg(urlInfo)
 }
 
 func GetKubernetesClient(kubeConfig *rest.Config) (kubernetes.Interface, error) {
