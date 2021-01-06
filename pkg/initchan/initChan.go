@@ -1,4 +1,4 @@
-package initChan
+package initchan
 
 import (
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"

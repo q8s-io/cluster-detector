@@ -37,6 +37,8 @@ GOLANGCI_LINT := $(TOOLS_BIN_DIR)/golangci-lint
 run:
 	GOPROXY=https://goproxy.cn GO111MODULE=on go run detector.go -conf "./configs/pro.toml"
 
+dockerRun:
+	docker run -d -v /root/.kube/config:/root/.kube/config $(REGISTRY)/$(IMAGE):$(VERSION)
 
 server:
 	@echo "version: $(VERSION)"

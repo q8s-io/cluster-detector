@@ -8,7 +8,7 @@ import (
 
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/basicPrepare"
 	"github.com/q8s-io/cluster-detector/pkg/infrastructure/config"
-	"github.com/q8s-io/cluster-detector/pkg/initChan"
+	"github.com/q8s-io/cluster-detector/pkg/initchan"
 	"github.com/q8s-io/cluster-detector/pkg/provider"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/event"
 	"github.com/q8s-io/cluster-detector/pkg/provider/collect/node"
@@ -40,7 +40,7 @@ func runApps() {
 	quitChannel := make(chan struct{}, 0)
 	defer close(quitChannel)
 
-	initChan.RunKafka()
+	initchan.RunKafka()
 	// Start watch resource of cluster
 	if cfg.EventsConfig.Enabled == true {
 		go event.StartWatch()
