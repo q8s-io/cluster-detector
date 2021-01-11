@@ -1,10 +1,13 @@
 # cluster-detector
 
-### Watch Events in cluster of kubernetes
+### Watch Events in cluster of Kubernetes
 
-### Inspect Node periodically in the cluster of kubernetes
+### Unused Resource
+
+### Inspect Node periodically in the cluster of Kubernetes
 
 1. Status
 2. Conditions
 
-### Inspect pod periodically in the cluster of kubernetes
+### Inspect Pod periodically in the cluster of Kubernetes
+
